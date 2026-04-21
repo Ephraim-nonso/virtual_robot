@@ -1,0 +1,5 @@
+services:
+  robot-simulator:
+    image: ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest
+    ports:
+      - "5001:5000"
