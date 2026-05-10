@@ -7,6 +7,7 @@ import { ZodError } from 'zod';
 
 import { config } from './config.js';
 import {
+  SimulatorConnectionError,
   SimulatorHttpError,
   simulatorRequest,
   toSimulatorWsUrl,
@@ -102,6 +103,14 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
     return;
   }
 
+  if (error instanceof SimulatorConnectionError) {
+    response.status(503).json({
+      message: 'Robot simulator is unavailable.',
+      details: error.message,
+    });
+    return;
+  }
+
   console.error(error);
   response.status(500).json({
     message: 'Unexpected backend error.',
@@ -139,7 +148,10 @@ wsServer.on('connection', (clientSocket) => {
   });
 
   clientSocket.on('close', () => {
-    if (upstreamSocket.readyState === WebSocket.OPEN || upstreamSocket.readyState === WebSocket.CONNECTING) {
+    if (
+      upstreamSocket.readyState === WebSocket.OPEN ||
+      upstreamSocket.readyState === WebSocket.CONNECTING
+    ) {
       upstreamSocket.close();
     }
   });

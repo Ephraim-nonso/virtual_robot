@@ -16,6 +16,12 @@ export class SimulatorHttpError extends Error {
   }
 }
 
+export class SimulatorConnectionError extends Error {
+  constructor(message = 'Unable to reach the robot simulator.') {
+    super(message);
+  }
+}
+
 export const validateMoveCommand = (payload: unknown) => moveSchema.parse(payload);
 
 export const toSimulatorWsUrl = (simulatorBaseUrl: string) =>
@@ -37,13 +43,21 @@ export const simulatorRequest = async (
   path: string,
   init?: RequestInit,
 ) => {
-  const response = await fetch(`${simulatorBaseUrl}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${simulatorBaseUrl}${path}`, {
+      ...init,
+      headers: {
+        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    throw new SimulatorConnectionError(
+      error instanceof Error ? error.message : 'Unable to reach the robot simulator.',
+    );
+  }
 
   const payload = await parseResponse(response);
 
