@@ -55,6 +55,9 @@ Create `backend/.env` if you want to override the defaults:
 ```env
 PORT=4000
 ROBOT_SIM_URL=http://127.0.0.1:5001
+SIMULATOR_REQUEST_TIMEOUT_MS=3000
+SIMULATOR_READ_RETRY_COUNT=2
+SIMULATOR_READ_RETRY_DELAY_MS=400
 ```
 
 ## Backend REST API
@@ -84,3 +87,13 @@ The backend normalizes simulator failures as follows:
 - invalid move payloads return `400`
 - simulator HTTP errors are forwarded with a `Simulator request failed` response
 - simulator connection failures return `503` with `Robot simulator is unavailable`
+- simulator timeouts return `504` with `Robot simulator request timed out`
+
+## Retry And Timeout Behavior
+
+The backend now applies resilience rules when talking to the simulator:
+
+- each simulator request uses a configurable timeout
+- safe read requests (`GET /health`, `GET /api/robot/status`, `GET /api/robot/map`, `GET /api/robot/sensor`) are retried automatically
+- mutating requests (`POST /api/robot/move`, `POST /api/robot/reset`) are not retried automatically to avoid duplicate robot commands
+- timeout and retry settings are controlled through the simulator environment variables above
