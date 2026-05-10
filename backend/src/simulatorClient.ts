@@ -24,6 +24,9 @@ export class SimulatorConnectionError extends Error {
 
 export const validateMoveCommand = (payload: unknown) => moveSchema.parse(payload);
 
+export const toSimulatorWsUrl = (simulatorBaseUrl: string) =>
+  simulatorBaseUrl.replace(/^http/, 'ws');
+
 const parseResponse = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? '';
 

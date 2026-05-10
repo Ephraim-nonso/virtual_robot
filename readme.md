@@ -12,10 +12,10 @@ Included in this issue:
 - backend routes for status, map, sensor, move, and reset
 - validation for move commands
 - normalized simulator HTTP and connection error responses
+- preservation of the existing telemetry WebSocket proxy for compatibility
 
 Not included yet:
 
-- WebSocket telemetry proxying
 - authentication or RBAC
 - audit logging or database persistence
 - frontend dashboard work
@@ -67,6 +67,7 @@ The frontend should use these backend routes instead of calling the simulator di
 - `GET /api/robot/sensor`
 - `POST /api/robot/move`
 - `POST /api/robot/reset`
+- `GET /ws/telemetry` (WebSocket upgrade)
 
 ### Example Move Request
 
