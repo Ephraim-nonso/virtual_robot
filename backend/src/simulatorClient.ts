@@ -5,6 +5,17 @@ const moveSchema = z.object({
   y: z.number().int().min(0).max(20),
 });
 
+const robotStatusSchema = z.object({
+  id: z.string(),
+  position: z.object({
+    x: z.number(),
+    y: z.number(),
+  }),
+  battery: z.number(),
+  status: z.string(),
+});
+export type RobotStatusPayload = z.infer<typeof robotStatusSchema>;
+
 export class SimulatorHttpError extends Error {
   status: number;
   payload: unknown;
@@ -36,6 +47,8 @@ export class SimulatorConnectionError extends Error {
 }
 
 export const validateMoveCommand = (payload: unknown) => moveSchema.parse(payload);
+export const parseRobotStatus = (payload: unknown): RobotStatusPayload =>
+  robotStatusSchema.parse(payload);
 
 export const toSimulatorWsUrl = (simulatorBaseUrl: string) =>
   simulatorBaseUrl.replace(/^http/, 'ws');
