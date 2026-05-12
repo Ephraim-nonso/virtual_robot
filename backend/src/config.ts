@@ -16,6 +16,9 @@ export const config = {
   simulatorRequestTimeoutMs: parseInteger(process.env.SIMULATOR_REQUEST_TIMEOUT_MS, 3000),
   simulatorReadRetryCount: parseInteger(process.env.SIMULATOR_READ_RETRY_COUNT, 2),
   simulatorReadRetryDelayMs: parseInteger(process.env.SIMULATOR_READ_RETRY_DELAY_MS, 400),
+  databasePath: process.env.DATABASE_PATH
+    ? path.resolve(process.env.DATABASE_PATH)
+    : path.join(backendRoot, 'data', 'virtual-robot.db'),
   authUsersFilePath: process.env.AUTH_USERS_FILE_PATH
     ? path.resolve(process.env.AUTH_USERS_FILE_PATH)
     : path.join(backendRoot, 'data', 'users.json'),
@@ -24,4 +27,5 @@ export const config = {
   seedCommanderName: process.env.SEED_COMMANDER_NAME ?? 'Commander',
   seedCommanderEmail: process.env.SEED_COMMANDER_EMAIL ?? 'commander@example.com',
   seedCommanderPassword: process.env.SEED_COMMANDER_PASSWORD ?? 'change-me',
+  auditDefaultActor: process.env.AUDIT_DEFAULT_ACTOR ?? 'system',
 };
