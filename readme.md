@@ -55,6 +55,14 @@ The backend runs on `http://localhost:4000` by default.
 npm run test:backend
 ```
 
+## Backend CI
+
+GitHub Actions now runs a backend-only CI workflow on pushes and pull requests. The workflow:
+
+- installs workspace dependencies
+- builds the backend TypeScript project
+- runs the backend Vitest suite
+
 ## Backend Environment Variables
 
 Create `backend/.env` if you want to override the defaults:
