@@ -6,11 +6,14 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { ZodError } from 'zod';
 
 import {
-  listCommandAuditLogs,
-  listStatusAuditLogs,
-  recordCommandAuditLog,
-  recordStatusAuditLog,
-} from './auditLog.js';
+  authenticateRequest,
+  AuthenticationError,
+  AuthorizationError,
+  requireAuth,
+} from './auth/middleware.js';
+import { parseLoginInput, parseRegisterInput } from './auth/schemas.js';
+import { initializeAuth, loginUser, registerViewer } from './auth/service.js';
+import { UserConflictError } from './auth/userStore.js';
 import { config } from './config.js';
 import { getDatabase } from './database.js';
 import {
@@ -30,6 +33,8 @@ const simulatorRequestOptions: SimulatorRequestOptions = {
   readRetryDelayMs: config.simulatorReadRetryDelayMs,
 };
 type AsyncRouteHandler = (request: Request, response: Response) => Promise<void>;
+const readAccess = requireAuth('VIEWER', 'COMMANDER');
+const commanderAccess = requireAuth('COMMANDER');
 
 const asyncHandler =
   (handler: AsyncRouteHandler) =>
@@ -125,6 +130,38 @@ const parseAuditLimit = (request: Request) => {
 app.use(cors());
 app.use(express.json());
 
+app.post(
+  '/api/auth/register',
+  asyncHandler(async (request, response) => {
+    const input = parseRegisterInput(request.body);
+    const user = await registerViewer(input);
+
+    response.status(201).json({
+      user,
+    });
+  }),
+);
+
+app.post(
+  '/api/auth/login',
+  asyncHandler(async (request, response) => {
+    const input = parseLoginInput(request.body);
+    const result = await loginUser(input);
+
+    response.json(result);
+  }),
+);
+
+app.get(
+  '/api/auth/me',
+  readAccess,
+  asyncHandler(async (request, response) => {
+    response.json({
+      user: request.authUser,
+    });
+  }),
+);
+
 app.get(
   '/health',
   asyncHandler(async (_request, response) => {
@@ -139,35 +176,13 @@ app.get(
   }),
 );
 
-app.get(
-  '/api/robot/status',
-  asyncHandler(async (_request, response) => {
-    const payload = await requestSimulator('/api/status');
-    recordStatusSnapshot('api/robot/status', payload);
-    response.json(payload);
-  }),
-);
-app.get('/api/robot/map', proxyReadRoute('/api/map'));
-app.get('/api/robot/sensor', proxyReadRoute('/api/sensor'));
-app.get(
-  '/api/audit/commands',
-  asyncHandler(async (request, response) => {
-    response.json({
-      items: listCommandAuditLogs(parseAuditLimit(request)),
-    });
-  }),
-);
-app.get(
-  '/api/audit/statuses',
-  asyncHandler(async (request, response) => {
-    response.json({
-      items: listStatusAuditLogs(parseAuditLimit(request)),
-    });
-  }),
-);
+app.get('/api/robot/status', readAccess, proxyReadRoute('/api/status'));
+app.get('/api/robot/map', readAccess, proxyReadRoute('/api/map'));
+app.get('/api/robot/sensor', readAccess, proxyReadRoute('/api/sensor'));
 
 app.post(
   '/api/robot/move',
+  commanderAccess,
   asyncHandler(async (request, response) => {
     const payload = validateMoveCommand(request.body);
     const upstreamResponse = await executeCommand({
@@ -187,6 +202,7 @@ app.post(
 
 app.post(
   '/api/robot/reset',
+  commanderAccess,
   asyncHandler(async (_request, response) => {
     const upstreamResponse = await executeCommand({
       commandType: 'RESET',
@@ -207,6 +223,20 @@ app.use(
       response.status(400).json({
         message: 'Invalid request body.',
         issues: error.issues,
+      });
+      return;
+    }
+
+    if (error instanceof UserConflictError) {
+      response.status(409).json({
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
+      response.status(error.status).json({
+        message: error.message,
       });
       return;
     }
@@ -280,6 +310,23 @@ wsServer.on('connection', (clientSocket) => {
 
 server.on('upgrade', (request, socket, head) => {
   if (request.url !== '/ws/telemetry') {
+    if (!request.url?.startsWith('/ws/telemetry')) {
+      socket.destroy();
+      return;
+    }
+  }
+
+  try {
+    const authUser = authenticateRequest({
+      headers: request.headers,
+      originalUrl: request.url ?? '/ws/telemetry',
+    } as Request);
+
+    if (authUser.role !== 'VIEWER' && authUser.role !== 'COMMANDER') {
+      socket.destroy();
+      return;
+    }
+  } catch {
     socket.destroy();
     return;
   }
@@ -288,6 +335,8 @@ server.on('upgrade', (request, socket, head) => {
     wsServer.emit('connection', clientSocket, request);
   });
 });
+
+await initializeAuth();
 
 server.listen(config.port, () => {
   console.log(`Backend listening on http://localhost:${config.port}`);
