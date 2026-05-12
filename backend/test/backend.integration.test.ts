@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import http from 'node:http';
 import { once } from 'node:events';
 
 import request from 'supertest';
@@ -17,9 +18,12 @@ type RunningBackend = {
 
 const startBackend = async (values: Record<string, string>): Promise<RunningBackend> =>
   withEnv(values, async () => {
-    const { createServer, initializeBackend } = await import('../src/app.js');
+    const { createApp } = await import('../src/app.js');
+    const { initializeBackend } = await import('../src/bootstrap.js');
+    const { attachTelemetryProxy } = await import('../src/realtime/telemetryProxy.js');
     await initializeBackend();
-    const { server } = createServer();
+    const server = http.createServer(createApp());
+    attachTelemetryProxy(server);
     server.listen(0, '127.0.0.1');
     await once(server, 'listening');
     const address = server.address();
