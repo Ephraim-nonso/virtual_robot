@@ -49,6 +49,12 @@ npm run dev:backend
 
 The backend runs on `http://localhost:4000` by default.
 
+4. Run the backend test suite:
+
+```bash
+npm run test:backend
+```
+
 ## Backend Environment Variables
 
 Create `backend/.env` if you want to override the defaults:

@@ -1,3 +1,6 @@
+import { startServer } from './app.js';
+
+await startServer();
 import http from 'node:http';
 
 import cors from 'cors';
