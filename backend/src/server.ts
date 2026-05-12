@@ -14,6 +14,7 @@ import {
 import { parseLoginInput, parseRegisterInput } from './auth/schemas.js';
 import { initializeAuth, loginUser, registerViewer } from './auth/service.js';
 import { UserConflictError } from './auth/userStore.js';
+import { recordCommandAuditLog, recordStatusAuditLog } from './auditLog.js';
 import { config } from './config.js';
 import { getDatabase } from './database.js';
 import {
