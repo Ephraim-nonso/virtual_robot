@@ -1,72 +1,3 @@
-.app-shell {
-  width: min(1200px, calc(100vw - 32px));
-  margin: 0 auto;
-  padding: 40px 0 56px;
-}
-
-.hero-panel,
-.panel,
-.banner {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.hero-panel {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-  padding: 32px;
-  border-radius: 28px;
-  margin-bottom: 20px;
-}
-
-.hero-metrics {
-  display: grid;
-  gap: 12px;
-}
-
-.metric-card,
-.stat-box {
-  padding: 16px;
-  border-radius: 20px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-}
-
-.metric-card span,
-.stat-box span,
-.eyebrow,
-.caption {
-  color: var(--muted);
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.metric-card strong,
-.stat-box strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--heading);
-  font-size: 1.35rem;
-}
-
-.lede {
-  max-width: 60ch;
-}
-
-.banner {
-  padding: 14px 18px;
-  border-radius: 18px;
-  margin-bottom: 20px;
-}
-
-.banner.error {
-  border-color: rgba(255, 107, 107, 0.4);
-  color: #ffb3b3;
-}
-
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -200,7 +131,6 @@ input {
 }
 
 @media (max-width: 960px) {
-  .hero-panel,
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -211,17 +141,6 @@ input {
 }
 
 @media (max-width: 640px) {
-  .app-shell {
-    width: min(100vw - 24px, 1200px);
-    padding-top: 24px;
-  }
-
-  .hero-panel,
-  .panel {
-    padding: 18px;
-    border-radius: 20px;
-  }
-
   .stats-grid,
   .control-form {
     grid-template-columns: 1fr;
