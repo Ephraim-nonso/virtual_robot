@@ -1,8 +1,8 @@
-import { prettyNumber } from '../lib/formatters';
+import { formatRelativeTime, prettyNumber } from '../lib/formatters';
 import { useDashboardContext } from '../context/useDashboardContext';
 
 export const SensorPanel = () => {
-  const { sensors, lidarSummary } = useDashboardContext();
+  const { sensors, lidarSummary, lastUpdatedAt, statusPollIntervalMs, isPolling } = useDashboardContext();
 
   return (
     <article className="panel">
@@ -10,6 +10,11 @@ export const SensorPanel = () => {
         <div>
           <p className="eyebrow">Sensors</p>
           <h2>Obstacle awareness</h2>
+          <p className="panel-subcopy">
+            {isPolling
+              ? 'Polling sensor status...'
+              : `Auto refresh every ${Math.round(statusPollIntervalMs / 1000)}s, last sync ${formatRelativeTime(lastUpdatedAt)}`}
+          </p>
         </div>
         <span className="caption">{sensors ? `${sensors.lidar.length} lidar samples` : 'No data yet'}</span>
       </div>
