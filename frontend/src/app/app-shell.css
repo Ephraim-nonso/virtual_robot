@@ -1,7 +1,8 @@
 .app-shell {
-  width: min(1200px, calc(100vw - 32px));
+  width: min(1440px, calc(100vw - 16px));
   margin: 0 auto;
-  padding: 40px 0 56px;
+  min-height: 100vh;
+  padding: 20px 0 28px;
 }
 
 .hero-panel,
@@ -14,20 +15,23 @@
 
 .hero-panel {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-  padding: 32px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 280px);
+  gap: 20px;
+  padding: 20px;
   border-radius: 28px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  align-items: start;
 }
 
 .hero-metrics {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
+  align-content: start;
 }
 
 .hero-visual {
-  margin-top: 16px;
+  margin-top: 8px;
   border-radius: 24px;
   border: 1px solid rgba(127, 158, 201, 0.18);
   background:
@@ -35,20 +39,30 @@
     radial-gradient(circle at bottom right, rgba(45, 226, 230, 0.14), transparent 28%),
     rgba(11, 21, 40, 0.88);
   overflow: hidden;
+  max-height: 180px;
 }
 
 .hero-visual-svg {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 180px;
+  object-fit: contain;
 }
 
 .metric-card,
 .stat-box {
-  padding: 16px;
   border-radius: 20px;
   background: var(--panel);
   border: 1px solid var(--border);
+}
+
+.metric-card {
+  padding: 12px 14px;
+}
+
+.stat-box {
+  padding: 16px;
 }
 
 .metric-card span,
@@ -66,13 +80,20 @@
   display: block;
   margin-top: 8px;
   color: var(--heading);
+}
+
+.metric-card strong {
+  font-size: 1.1rem;
+}
+
+.stat-box strong {
   font-size: 1.35rem;
 }
 
 .banner {
   padding: 14px 18px;
   border-radius: 18px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .banner.error {
@@ -84,17 +105,62 @@
   .hero-panel {
     grid-template-columns: 1fr;
   }
+
+  .hero-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hero-visual,
+  .hero-visual-svg {
+    max-height: 160px;
+  }
 }
 
 @media (max-width: 640px) {
   .app-shell {
-    width: min(100vw - 24px, 1200px);
-    padding-top: 24px;
+    width: min(100vw - 12px, 1440px);
+    padding-top: 12px;
+    padding-bottom: 20px;
   }
 
   .hero-panel,
   .panel {
     padding: 18px;
     border-radius: 20px;
+  }
+
+  .hero-panel {
+    gap: 18px;
+  }
+
+  .hero-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    padding: 12px 14px;
+  }
+
+  .stat-box {
+    padding: 14px;
+  }
+
+  .metric-card strong {
+    font-size: 1rem;
+  }
+
+  .stat-box strong {
+    font-size: 1.15rem;
+  }
+
+  .hero-visual,
+  .hero-visual-svg {
+    max-height: 130px;
+  }
+
+  .banner {
+    padding: 12px 14px;
+    border-radius: 16px;
+    margin-bottom: 16px;
   }
 }
