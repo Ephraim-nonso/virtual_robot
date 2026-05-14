@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getMap, getSensors, getStatus, getTelemetrySocketUrl, moveRobot, resetRobot } from '../../../lib/api/robotApi';
 import { summarizeLidar } from '../lib/formatters';
 import type { TelemetryMessage } from '../types';
 import type { MapResponse, RobotStatusResponse, SensorResponse } from '../../../types/robot';
+
+const STATUS_POLL_INTERVAL_MS = 5000;
 
 export const useDashboard = () => {
   const [status, setStatus] = useState<RobotStatusResponse | null>(null);
@@ -16,30 +18,68 @@ export const useDashboard = () => {
   const [telemetryState, setTelemetryState] = useState('Connecting...');
   const [targetX, setTargetX] = useState(0);
   const [targetY, setTargetY] = useState(0);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [lastTelemetryAt, setLastTelemetryAt] = useState<number | null>(null);
+  const [telemetryPacketCount, setTelemetryPacketCount] = useState(0);
+  const [isPolling, setIsPolling] = useState(false);
+  const hasInitializedTargets = useRef(false);
 
-  const loadDashboard = async () => {
+  const refreshLiveStatus = useCallback(async (options?: { silent?: boolean; preserveError?: boolean }) => {
+    const silent = options?.silent ?? false;
+
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    } else {
+      setIsPolling(true);
+    }
+
+    try {
+      const [nextStatus, nextSensors] = await Promise.all([getStatus(), getSensors()]);
+
+      setStatus(nextStatus);
+      setSensors(nextSensors);
+
+      if (!hasInitializedTargets.current) {
+        setTargetX(nextStatus.position.x);
+        setTargetY(nextStatus.position.y);
+        hasInitializedTargets.current = true;
+      }
+
+      setLastUpdatedAt(Date.now());
+
+      if (!options?.preserveError) {
+        setError(null);
+      }
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Unable to refresh live robot data.';
+      setError(message);
+    } finally {
+      if (!silent) {
+        setLoading(false);
+      } else {
+        setIsPolling(false);
+      }
+    }
+  }, []);
+
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const [nextStatus, nextMap, nextSensors] = await Promise.all([
-        getStatus(),
+      const [nextMap] = await Promise.all([
         getMap(),
-        getSensors(),
+        refreshLiveStatus({ preserveError: true }),
       ]);
 
-      setStatus(nextStatus);
       setMap(nextMap);
-      setSensors(nextSensors);
-      setTargetX(nextStatus.position.x);
-      setTargetY(nextStatus.position.y);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Unable to load robot data.';
       setError(message);
-    } finally {
       setLoading(false);
     }
-  };
+  }, [refreshLiveStatus]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -49,7 +89,17 @@ export const useDashboard = () => {
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void refreshLiveStatus({ silent: true });
+    }, STATUS_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [refreshLiveStatus]);
 
   useEffect(() => {
     const socket = new WebSocket(getTelemetrySocketUrl());
@@ -64,6 +114,9 @@ export const useDashboard = () => {
       } catch {
         setTelemetry({ raw: String(event.data) });
       }
+
+      setLastTelemetryAt(Date.now());
+      setTelemetryPacketCount((count) => count + 1);
     });
 
     socket.addEventListener('close', () => {
@@ -79,7 +132,7 @@ export const useDashboard = () => {
     };
   }, []);
 
-  const submitMove = async () => {
+  const submitMove = useCallback(async () => {
     setBusy(true);
     setError(null);
 
@@ -92,9 +145,9 @@ export const useDashboard = () => {
     } finally {
       setBusy(false);
     }
-  };
+  }, [loadDashboard, targetX, targetY]);
 
-  const submitReset = async () => {
+  const submitReset = useCallback(async () => {
     setBusy(true);
     setError(null);
 
@@ -107,9 +160,28 @@ export const useDashboard = () => {
     } finally {
       setBusy(false);
     }
-  };
+  }, [loadDashboard]);
 
   const lidarSummary = useMemo(() => summarizeLidar(sensors), [sensors]);
+  const connectionHealth = useMemo(() => {
+    if (loading) {
+      return 'Syncing';
+    }
+
+    if (error) {
+      return 'Degraded';
+    }
+
+    if (telemetryState !== 'Live') {
+      return 'Partial';
+    }
+
+    if (!lastUpdatedAt) {
+      return 'Pending';
+    }
+
+    return 'Healthy';
+  }, [error, lastUpdatedAt, loading, telemetryState]);
 
   return {
     status,
@@ -123,6 +195,12 @@ export const useDashboard = () => {
     targetX,
     targetY,
     lidarSummary,
+    lastUpdatedAt,
+    lastTelemetryAt,
+    telemetryPacketCount,
+    isPolling,
+    connectionHealth,
+    statusPollIntervalMs: STATUS_POLL_INTERVAL_MS,
     setTargetX,
     setTargetY,
     loadDashboard,

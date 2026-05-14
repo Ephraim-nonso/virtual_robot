@@ -1,11 +1,12 @@
 import type { FormEvent } from 'react';
 
-import { prettyNumber } from '../lib/formatters';
+import { formatRelativeTime, prettyNumber } from '../lib/formatters';
 import { useDashboardContext } from '../context/useDashboardContext';
 
 export const RobotPanel = () => {
   const {
     status,
+    map,
     busy,
     loading,
     targetX,
@@ -15,6 +16,9 @@ export const RobotPanel = () => {
     loadDashboard,
     submitMove,
     submitReset,
+    connectionHealth,
+    lastUpdatedAt,
+    isPolling,
   } = useDashboardContext();
 
   const handleMove = async (event: FormEvent<HTMLFormElement>) => {
@@ -26,8 +30,11 @@ export const RobotPanel = () => {
     <article className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Robot</p>
-          <h2>Current state</h2>
+          <p className="eyebrow">Commander Controls</p>
+          <h2>Move and reset</h2>
+          <p className="panel-subcopy">
+            {isPolling ? 'Refreshing live robot status...' : `Last synced ${formatRelativeTime(lastUpdatedAt)}`}
+          </p>
         </div>
         <button className="ghost-button" onClick={() => void loadDashboard()} disabled={busy || loading}>
           Refresh
@@ -35,7 +42,7 @@ export const RobotPanel = () => {
       </div>
 
       {status ? (
-        <div className="stats-grid">
+        <div className="stats-grid status-grid">
           <div className="stat-box">
             <span>Robot ID</span>
             <strong>{status.id}</strong>
@@ -51,11 +58,22 @@ export const RobotPanel = () => {
             <strong>{prettyNumber(status.battery)}%</strong>
           </div>
           <div className="stat-box">
-            <span>Mode</span>
+            <span>Robot State</span>
             <strong>{status.status}</strong>
+          </div>
+          <div className="stat-box">
+            <span>Connection Health</span>
+            <strong>{connectionHealth}</strong>
           </div>
         </div>
       ) : null}
+
+      <div className="control-callout">
+        <strong>Control endpoints</strong>
+        <p>
+          Send move commands to `POST /api/robot/move` and reset the simulator with `POST /api/robot/reset`.
+        </p>
+      </div>
 
       <form className="control-form" onSubmit={(event) => void handleMove(event)}>
         <label>
@@ -63,7 +81,7 @@ export const RobotPanel = () => {
           <input
             type="number"
             min="0"
-            max="20"
+            max={map ? Math.max(0, map.width - 1) : undefined}
             value={targetX}
             onChange={(event) => setTargetX(Number(event.target.value))}
           />
@@ -73,7 +91,7 @@ export const RobotPanel = () => {
           <input
             type="number"
             min="0"
-            max="20"
+            max={map ? Math.max(0, map.height - 1) : undefined}
             value={targetY}
             onChange={(event) => setTargetY(Number(event.target.value))}
           />
