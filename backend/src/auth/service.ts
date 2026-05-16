@@ -21,6 +21,16 @@ export const registerUser = async (input: {
   return toAuthUser(user);
 };
 
+export const registerViewer = async (input: {
+  name: string;
+  email: string;
+  password: string;
+}) =>
+  registerUser({
+    ...input,
+    role: 'VIEWER',
+  });
+
 export const loginUser = async (input: { email: string; password: string }) => {
   const user = findUserByEmail(input.email);
 
