@@ -1,3 +1,4 @@
+import { useAuthContext } from '../../auth/context/useAuthContext';
 import { useDashboardContext } from '../context/useDashboardContext';
 
 const navItems = [
@@ -10,6 +11,7 @@ const navItems = [
 
 export const DashboardSidebar = () => {
   const { status, telemetryState, map, sensors } = useDashboardContext();
+  const { user, logout } = useAuthContext();
 
   return (
     <aside className="dashboard-sidebar panel">
@@ -24,6 +26,14 @@ export const DashboardSidebar = () => {
 
       <div className="sidebar-stat-list">
         <div>
+          <span>Operator</span>
+          <strong>{user?.name ?? '--'}</strong>
+        </div>
+        <div>
+          <span>Role</span>
+          <strong>{user?.role ?? '--'}</strong>
+        </div>
+        <div>
           <span>Robot</span>
           <strong>{status?.id ?? '--'}</strong>
         </div>
@@ -35,6 +45,9 @@ export const DashboardSidebar = () => {
           <span>Sensors</span>
           <strong>{sensors ? `${sensors.lidar.length} samples` : '--'}</strong>
         </div>
+        <button className="ghost-button sidebar-logout-button" onClick={logout}>
+          Sign out
+        </button>
       </div>
     </aside>
   );

@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { requireAuth } from '../auth/middleware.js';
 import { parseLoginInput, parseRegisterInput } from '../auth/schemas.js';
-import { loginUser, registerViewer } from '../auth/service.js';
+import { loginUser, registerUser } from '../auth/service.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
 const readAccess = requireAuth('VIEWER', 'COMMANDER');
@@ -14,7 +14,7 @@ export const createAuthRouter = () => {
     '/api/auth/register',
     asyncHandler(async (request, response) => {
       const input = parseRegisterInput(request.body);
-      const user = await registerViewer(input);
+      const user = await registerUser(input);
 
       response.status(201).json({
         user,

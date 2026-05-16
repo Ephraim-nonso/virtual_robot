@@ -1,4 +1,5 @@
 import { getApiBaseUrl, httpRequest } from './httpClient';
+import { getStoredAuthToken } from '../../features/auth/lib/authStorage';
 import type { MapResponse, RobotStatusResponse, SensorResponse } from '../../types/robot';
 
 export const getStatus = () => httpRequest<RobotStatusResponse>('/api/robot/status');
@@ -20,16 +21,29 @@ export const resetRobot = () =>
 
 export const getTelemetrySocketUrl = () => {
   const explicitBaseUrl = import.meta.env.VITE_WS_BASE_URL;
+  const token = getStoredAuthToken();
+
+  const appendToken = (baseUrl: string) => {
+    if (!token) {
+      return `${baseUrl.replace(/\/$/, '')}/ws/telemetry`;
+    }
+
+    const url = new URL(`${baseUrl.replace(/\/$/, '')}/ws/telemetry`);
+    url.searchParams.set('token', token);
+    return url.toString();
+  };
+
   if (explicitBaseUrl) {
-    return `${explicitBaseUrl.replace(/\/$/, '')}/ws/telemetry`;
+    return appendToken(explicitBaseUrl);
   }
 
   const apiBaseUrl = getApiBaseUrl();
 
   if (apiBaseUrl.startsWith('http')) {
-    return `${apiBaseUrl.replace(/^http/, 'ws')}/ws/telemetry`;
+    return appendToken(apiBaseUrl.replace(/^http/, 'ws'));
   }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/ws/telemetry`;
+  const fallbackBaseUrl = `${protocol}//${window.location.host}`;
+  return appendToken(fallbackBaseUrl);
 };

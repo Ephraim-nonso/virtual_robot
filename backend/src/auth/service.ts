@@ -2,19 +2,20 @@ import { AuthenticationError } from './middleware.js';
 import { verifyPassword } from './passwords.js';
 import { createAuthToken } from './tokenService.js';
 import { createUser, ensureSeedCommander, findUserByEmail, toAuthUser } from './userStore.js';
+import type { Role } from './types.js';
 
 export const initializeAuth = async () => {
   await ensureSeedCommander();
 };
 
-export const registerViewer = async (input: {
+export const registerUser = async (input: {
   name: string;
   email: string;
   password: string;
+  role: Role;
 }) => {
   const user = await createUser({
     ...input,
-    role: 'VIEWER',
   });
 
   return toAuthUser(user);
