@@ -1,11 +1,60 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getMap, getSensors, getStatus, getTelemetrySocketUrl, moveRobot, resetRobot } from '../../../lib/api/robotApi';
+import { ApiError } from '../../../lib/api/httpClient';
 import { summarizeLidar } from '../lib/formatters';
 import type { TelemetryMessage } from '../types';
 import type { MapResponse, RobotStatusResponse, SensorResponse } from '../../../types/robot';
 
 const STATUS_POLL_INTERVAL_MS = 5000;
+const TELEMETRY_SIGNAL_LOST_MS = 12000;
+const TELEMETRY_RECONNECT_BASE_DELAY_MS = 1000;
+const TELEMETRY_RECONNECT_MAX_DELAY_MS = 10000;
+
+type BackendStatus = 'syncing' | 'healthy' | 'degraded' | 'unavailable';
+type TelemetryStatus = 'connecting' | 'live' | 'reconnecting' | 'signal_lost' | 'unavailable';
+
+const getBackendStatusFromError = (error: unknown): BackendStatus => {
+  if (error instanceof ApiError) {
+    if (error.status === 504) {
+      return 'degraded';
+    }
+
+    if (error.status >= 500 || error.status === 503) {
+      return 'unavailable';
+    }
+  }
+
+  return 'unavailable';
+};
+
+const getBackendStatusLabel = (status: BackendStatus) => {
+  switch (status) {
+    case 'syncing':
+      return 'Syncing';
+    case 'degraded':
+      return 'Degraded';
+    case 'unavailable':
+      return 'Unavailable';
+    default:
+      return 'Healthy';
+  }
+};
+
+const getTelemetryStatusLabel = (status: TelemetryStatus) => {
+  switch (status) {
+    case 'connecting':
+      return 'Connecting...';
+    case 'reconnecting':
+      return 'Reconnecting...';
+    case 'signal_lost':
+      return 'Signal lost';
+    case 'unavailable':
+      return 'Unavailable';
+    default:
+      return 'Live';
+  }
+};
 
 export const useDashboard = () => {
   const [status, setStatus] = useState<RobotStatusResponse | null>(null);
@@ -15,21 +64,36 @@ export const useDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [telemetryState, setTelemetryState] = useState('Connecting...');
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>('syncing');
+  const [backendIssueMessage, setBackendIssueMessage] = useState<string | null>(null);
+  const [telemetryStatus, setTelemetryStatus] = useState<TelemetryStatus>('connecting');
+  const [telemetryIssueMessage, setTelemetryIssueMessage] = useState<string | null>(null);
   const [targetX, setTargetX] = useState(0);
   const [targetY, setTargetY] = useState(0);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const [lastTelemetryAt, setLastTelemetryAt] = useState<number | null>(null);
   const [telemetryPacketCount, setTelemetryPacketCount] = useState(0);
   const [isPolling, setIsPolling] = useState(false);
+  const [telemetryReconnectAttempt, setTelemetryReconnectAttempt] = useState(0);
   const hasInitializedTargets = useRef(false);
+  const liveStatusRequestInFlightRef = useRef(false);
+  const lastTelemetryAtRef = useRef<number | null>(null);
+  const telemetryReconnectAttemptRef = useRef(0);
+  const telemetryIssueMessageRef = useRef<string | null>(null);
 
   const refreshLiveStatus = useCallback(async (options?: { silent?: boolean; preserveError?: boolean }) => {
     const silent = options?.silent ?? false;
 
+    if (silent && liveStatusRequestInFlightRef.current) {
+      return;
+    }
+
+    liveStatusRequestInFlightRef.current = true;
+
     if (!silent) {
       setLoading(true);
       setError(null);
+      setBackendStatus('syncing');
     } else {
       setIsPolling(true);
     }
@@ -47,14 +111,24 @@ export const useDashboard = () => {
       }
 
       setLastUpdatedAt(Date.now());
+      setBackendStatus('healthy');
+      setBackendIssueMessage(null);
 
       if (!options?.preserveError) {
         setError(null);
       }
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Unable to refresh live robot data.';
-      setError(message);
+      const nextBackendStatus = getBackendStatusFromError(requestError);
+      setBackendStatus(nextBackendStatus);
+      setBackendIssueMessage(message);
+
+      if (!silent) {
+        setError(message);
+      }
     } finally {
+      liveStatusRequestInFlightRef.current = false;
+
       if (!silent) {
         setLoading(false);
       } else {
@@ -76,10 +150,20 @@ export const useDashboard = () => {
       setMap(nextMap);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Unable to load robot data.';
+      setBackendStatus(getBackendStatusFromError(requestError));
+      setBackendIssueMessage(message);
       setError(message);
       setLoading(false);
     }
   }, [refreshLiveStatus]);
+
+  useEffect(() => {
+    telemetryReconnectAttemptRef.current = telemetryReconnectAttempt;
+  }, [telemetryReconnectAttempt]);
+
+  useEffect(() => {
+    telemetryIssueMessageRef.current = telemetryIssueMessage;
+  }, [telemetryIssueMessage]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -102,33 +186,162 @@ export const useDashboard = () => {
   }, [refreshLiveStatus]);
 
   useEffect(() => {
-    const socket = new WebSocket(getTelemetrySocketUrl());
+    let isDisposed = false;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: number | null = null;
+    let signalTimer: number | null = null;
+    let receivedTelemetryAtLeastOnce = false;
 
-    socket.addEventListener('open', () => {
-      setTelemetryState('Live');
-    });
+    const clearReconnectTimer = () => {
+      if (reconnectTimer !== null) {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    };
 
-    socket.addEventListener('message', (event) => {
-      try {
-        setTelemetry(JSON.parse(event.data as string) as Record<string, unknown>);
-      } catch {
-        setTelemetry({ raw: String(event.data) });
+    const clearSignalTimer = () => {
+      if (signalTimer !== null) {
+        window.clearInterval(signalTimer);
+        signalTimer = null;
+      }
+    };
+
+    const cleanupSocket = () => {
+      if (socket) {
+        socket.onopen = null;
+        socket.onmessage = null;
+        socket.onerror = null;
+        socket.onclose = null;
+
+        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+          socket.close();
+        }
+
+        socket = null;
+      }
+    };
+
+    const scheduleReconnect = (nextStatus: TelemetryStatus, reason?: string) => {
+      if (isDisposed) {
+        return;
       }
 
-      setLastTelemetryAt(Date.now());
-      setTelemetryPacketCount((count) => count + 1);
-    });
+      const nextAttempt = telemetryReconnectAttemptRef.current + 1;
+      const delay = Math.min(
+        TELEMETRY_RECONNECT_BASE_DELAY_MS * 2 ** Math.max(0, nextAttempt - 1),
+        TELEMETRY_RECONNECT_MAX_DELAY_MS,
+      );
 
-    socket.addEventListener('close', () => {
-      setTelemetryState('Disconnected');
-    });
+      setTelemetryReconnectAttempt(nextAttempt);
+      setTelemetryStatus(nextStatus);
 
-    socket.addEventListener('error', () => {
-      setTelemetryState('Unavailable');
-    });
+      if (reason) {
+        telemetryIssueMessageRef.current = reason;
+        setTelemetryIssueMessage(reason);
+      }
+
+      clearReconnectTimer();
+      reconnectTimer = window.setTimeout(() => {
+        connectTelemetry();
+      }, delay);
+    };
+
+    const connectTelemetry = () => {
+      if (isDisposed) {
+        return;
+      }
+
+      cleanupSocket();
+      clearSignalTimer();
+
+      setTelemetryStatus(telemetryReconnectAttemptRef.current > 0 ? 'reconnecting' : 'connecting');
+      socket = new WebSocket(getTelemetrySocketUrl());
+
+      socket.onopen = () => {
+        setTelemetryReconnectAttempt(0);
+        setTelemetryStatus('live');
+        telemetryIssueMessageRef.current = null;
+        setTelemetryIssueMessage(null);
+        lastTelemetryAtRef.current = Date.now();
+
+        clearSignalTimer();
+        signalTimer = window.setInterval(() => {
+          const lastSeenAt = lastTelemetryAtRef.current;
+
+          if (!lastSeenAt) {
+            return;
+          }
+
+          if (Date.now() - lastSeenAt > TELEMETRY_SIGNAL_LOST_MS) {
+            telemetryIssueMessageRef.current = 'Telemetry packets stopped arriving from the backend stream.';
+            setTelemetryStatus('signal_lost');
+            setTelemetryIssueMessage('Telemetry packets stopped arriving from the backend stream.');
+            cleanupSocket();
+            scheduleReconnect('signal_lost');
+          }
+        }, 1000);
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const parsedMessage = JSON.parse(event.data as string) as Record<string, unknown>;
+
+          if (parsedMessage.type === 'backend_error') {
+            telemetryIssueMessageRef.current =
+              typeof parsedMessage.message === 'string'
+                ? parsedMessage.message
+                : 'Telemetry proxy reported an upstream backend issue.';
+            setTelemetryIssueMessage(
+              typeof parsedMessage.message === 'string'
+                ? parsedMessage.message
+                : 'Telemetry proxy reported an upstream backend issue.',
+            );
+            setTelemetryStatus('unavailable');
+            return;
+          }
+
+          setTelemetry(parsedMessage);
+        } catch {
+          setTelemetry({ raw: String(event.data) });
+        }
+
+        const now = Date.now();
+        receivedTelemetryAtLeastOnce = true;
+        lastTelemetryAtRef.current = now;
+        setLastTelemetryAt(now);
+        setTelemetryPacketCount((count) => count + 1);
+        setTelemetryStatus('live');
+      };
+
+      socket.onerror = () => {
+        if (!receivedTelemetryAtLeastOnce) {
+          telemetryIssueMessageRef.current = 'Unable to establish the telemetry websocket connection.';
+          setTelemetryIssueMessage('Unable to establish the telemetry websocket connection.');
+        }
+      };
+
+      socket.onclose = () => {
+        clearSignalTimer();
+
+        if (isDisposed) {
+          return;
+        }
+
+        const nextStatus = receivedTelemetryAtLeastOnce ? 'reconnecting' : 'unavailable';
+        scheduleReconnect(
+          nextStatus,
+          telemetryIssueMessageRef.current ?? 'Telemetry connection closed unexpectedly.',
+        );
+      };
+    };
+
+    connectTelemetry();
 
     return () => {
-      socket.close();
+      isDisposed = true;
+      clearReconnectTimer();
+      clearSignalTimer();
+      cleanupSocket();
     };
   }, []);
 
@@ -163,16 +376,34 @@ export const useDashboard = () => {
   }, [loadDashboard]);
 
   const lidarSummary = useMemo(() => summarizeLidar(sensors), [sensors]);
+  const telemetryState = useMemo(() => getTelemetryStatusLabel(telemetryStatus), [telemetryStatus]);
+  const backendState = useMemo(() => getBackendStatusLabel(backendStatus), [backendStatus]);
   const connectionHealth = useMemo(() => {
     if (loading) {
       return 'Syncing';
     }
 
-    if (error) {
+    if (backendStatus === 'unavailable') {
+      return 'Backend unavailable';
+    }
+
+    if (backendStatus === 'degraded') {
       return 'Degraded';
     }
 
-    if (telemetryState !== 'Live') {
+    if (telemetryStatus === 'signal_lost') {
+      return 'Signal lost';
+    }
+
+    if (telemetryStatus === 'reconnecting') {
+      return 'Reconnecting';
+    }
+
+    if (telemetryStatus === 'unavailable') {
+      return 'Telemetry unavailable';
+    }
+
+    if (telemetryStatus !== 'live') {
       return 'Partial';
     }
 
@@ -181,7 +412,7 @@ export const useDashboard = () => {
     }
 
     return 'Healthy';
-  }, [error, lastUpdatedAt, loading, telemetryState]);
+  }, [backendStatus, lastUpdatedAt, loading, telemetryStatus]);
 
   return {
     status,
@@ -200,7 +431,14 @@ export const useDashboard = () => {
     telemetryPacketCount,
     isPolling,
     connectionHealth,
+    backendStatus,
+    backendState,
+    backendIssueMessage,
+    telemetryStatus,
     statusPollIntervalMs: STATUS_POLL_INTERVAL_MS,
+    telemetrySignalLostMs: TELEMETRY_SIGNAL_LOST_MS,
+    telemetryReconnectAttempt,
+    telemetryIssueMessage,
     setTargetX,
     setTargetY,
     loadDashboard,
