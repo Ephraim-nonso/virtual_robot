@@ -1,17 +1,25 @@
-import { AppShell } from './AppShell';
-import { RobotHeroIllustration } from './RobotHeroIllustration';
-import { DashboardProvider } from '../features/dashboard/context/DashboardContext';
-import { DashboardMetrics, DashboardScreen } from '../features/dashboard/DashboardScreen';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+
+import { AuthProvider } from '../features/auth/context/AuthContext';
+import { ProtectedRoute, PublicOnlyRoute } from './RouteGuards';
+import { DashboardPage } from '../pages/DashboardPage';
+import { LoginPage } from '../pages/LoginPage';
 
 const App = () => (
-  <DashboardProvider>
-    <AppShell
-      heroVisual={<RobotHeroIllustration />}
-      metrics={<DashboardMetrics />}
-    >
-      <DashboardScreen />
-    </AppShell>
-  </DashboardProvider>
+  <AuthProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route element={<PublicOnlyRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
+  </AuthProvider>
 );
 
 export default App;

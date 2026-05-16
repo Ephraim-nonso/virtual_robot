@@ -87,6 +87,10 @@
   gap: 8px;
 }
 
+.sidebar-logout-button {
+  padding-block: 8px;
+}
+
 .dashboard-command-bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
@@ -188,6 +192,10 @@
   margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.role-locked-callout {
+  border-color: rgba(255, 196, 87, 0.3);
 }
 
 .control-form label {
