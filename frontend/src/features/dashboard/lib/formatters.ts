@@ -21,6 +21,24 @@ export const formatRelativeTime = (timestamp: number | null) => {
   return `${minutesAgo}m ago`;
 };
 
+export const formatDateTime = (value: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+
+export const parseJsonText = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+};
+
 export const summarizeLidar = (sensors: SensorResponse | null) => {
   if (!sensors || sensors.lidar.length === 0) {
     return { min: 0, max: 0, average: 0 };

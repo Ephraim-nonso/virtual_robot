@@ -1,6 +1,7 @@
 import './dashboard.css';
 
 import { AlertsPanel } from './components/AlertsPanel';
+import { AuditLogPanel } from './components/AuditLogPanel';
 import { DashboardHeader } from './components/DashboardHeader';
 import { DashboardSidebar } from './components/DashboardSidebar';
 import { DashboardBanners } from './components/Banners';
@@ -21,8 +22,9 @@ export const DashboardScreen = () => (
         <MapPanel />
       </div>
       <section className="dashboard-grid">
-        <AlertsPanel />
+        <AuditLogPanel />
         <div className="dashboard-stack">
+          <AlertsPanel />
           <SensorPanel />
           <TelemetryPanel />
         </div>
