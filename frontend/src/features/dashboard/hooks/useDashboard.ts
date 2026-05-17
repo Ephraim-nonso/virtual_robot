@@ -1,15 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { getMap, getSensors, getStatus, getTelemetrySocketUrl, moveRobot, resetRobot } from '../../../lib/api/robotApi';
+import {
+  getCommandAuditLogs,
+  getMap,
+  getSensors,
+  getStatus,
+  getStatusAuditLogs,
+  getTelemetrySocketUrl,
+  moveRobot,
+  resetRobot,
+} from '../../../lib/api/robotApi';
 import { ApiError } from '../../../lib/api/httpClient';
 import { summarizeLidar } from '../lib/formatters';
 import type { TelemetryMessage } from '../types';
-import type { MapResponse, RobotStatusResponse, SensorResponse } from '../../../types/robot';
+import type {
+  CommandAuditItem,
+  MapResponse,
+  RobotStatusResponse,
+  SensorResponse,
+  StatusAuditItem,
+} from '../../../types/robot';
 
 const STATUS_POLL_INTERVAL_MS = 5000;
 const TELEMETRY_SIGNAL_LOST_MS = 12000;
 const TELEMETRY_RECONNECT_BASE_DELAY_MS = 1000;
 const TELEMETRY_RECONNECT_MAX_DELAY_MS = 10000;
+const AUDIT_LOG_LIMIT = 10;
 
 type BackendStatus = 'syncing' | 'healthy' | 'degraded' | 'unavailable';
 type TelemetryStatus = 'connecting' | 'live' | 'reconnecting' | 'signal_lost' | 'unavailable';
@@ -75,6 +91,10 @@ export const useDashboard = () => {
   const [telemetryPacketCount, setTelemetryPacketCount] = useState(0);
   const [isPolling, setIsPolling] = useState(false);
   const [telemetryReconnectAttempt, setTelemetryReconnectAttempt] = useState(0);
+  const [commandAuditItems, setCommandAuditItems] = useState<CommandAuditItem[]>([]);
+  const [statusAuditItems, setStatusAuditItems] = useState<StatusAuditItem[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
   const hasInitializedTargets = useRef(false);
   const liveStatusRequestInFlightRef = useRef(false);
   const lastTelemetryAtRef = useRef<number | null>(null);
@@ -137,17 +157,43 @@ export const useDashboard = () => {
     }
   }, []);
 
+  const loadAuditHistory = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+
+    if (!silent) {
+      setAuditLoading(true);
+      setAuditError(null);
+    }
+
+    try {
+      const [commandLogs, statusLogs] = await Promise.all([
+        getCommandAuditLogs(AUDIT_LOG_LIMIT),
+        getStatusAuditLogs(AUDIT_LOG_LIMIT),
+      ]);
+
+      setCommandAuditItems(commandLogs.items);
+      setStatusAuditItems(statusLogs.items);
+      setAuditError(null);
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error ? requestError.message : 'Unable to load mission history.';
+      setAuditError(message);
+    } finally {
+      if (!silent) {
+        setAuditLoading(false);
+      }
+    }
+  }, []);
+
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const [nextMap] = await Promise.all([
-        getMap(),
-        refreshLiveStatus({ preserveError: true }),
-      ]);
+      const [nextMap] = await Promise.all([getMap(), refreshLiveStatus({ preserveError: true })]);
 
       setMap(nextMap);
+      void loadAuditHistory({ silent: true });
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Unable to load robot data.';
       setBackendStatus(getBackendStatusFromError(requestError));
@@ -155,7 +201,7 @@ export const useDashboard = () => {
       setError(message);
       setLoading(false);
     }
-  }, [refreshLiveStatus]);
+  }, [loadAuditHistory, refreshLiveStatus]);
 
   useEffect(() => {
     telemetryReconnectAttemptRef.current = telemetryReconnectAttempt;
@@ -352,13 +398,14 @@ export const useDashboard = () => {
     try {
       await moveRobot(targetX, targetY);
       await loadDashboard();
+      await loadAuditHistory({ silent: true });
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Unable to move robot.';
       setError(message);
     } finally {
       setBusy(false);
     }
-  }, [loadDashboard, targetX, targetY]);
+  }, [loadAuditHistory, loadDashboard, targetX, targetY]);
 
   const submitReset = useCallback(async () => {
     setBusy(true);
@@ -367,13 +414,14 @@ export const useDashboard = () => {
     try {
       await resetRobot();
       await loadDashboard();
+      await loadAuditHistory({ silent: true });
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Unable to reset simulation.';
       setError(message);
     } finally {
       setBusy(false);
     }
-  }, [loadDashboard]);
+  }, [loadAuditHistory, loadDashboard]);
 
   const lidarSummary = useMemo(() => summarizeLidar(sensors), [sensors]);
   const telemetryState = useMemo(() => getTelemetryStatusLabel(telemetryStatus), [telemetryStatus]);
@@ -439,6 +487,11 @@ export const useDashboard = () => {
     telemetrySignalLostMs: TELEMETRY_SIGNAL_LOST_MS,
     telemetryReconnectAttempt,
     telemetryIssueMessage,
+    commandAuditItems,
+    statusAuditItems,
+    auditLoading,
+    auditError,
+    loadAuditHistory,
     setTargetX,
     setTargetY,
     loadDashboard,

@@ -23,3 +23,26 @@ export type SensorResponse = {
   W: number;
   lidar: number[];
 };
+
+export type CommandAuditItem = {
+  id: number;
+  createdAt: string;
+  actor: string;
+  commandType: string;
+  requestPayload: string | null;
+  resultStatus: 'SUCCEEDED' | 'FAILED';
+  responsePayload: string | null;
+  errorMessage: string | null;
+};
+
+export type StatusAuditItem = {
+  id: number;
+  createdAt: string;
+  source: string;
+  robotId: string;
+  positionX: number;
+  positionY: number;
+  battery: number;
+  robotStatus: RobotState;
+  rawPayload: string;
+};

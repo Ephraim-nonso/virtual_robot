@@ -342,6 +342,79 @@ input {
   min-height: 100%;
 }
 
+.audit-panel {
+  min-height: 100%;
+}
+
+.audit-banner {
+  margin-bottom: 12px;
+}
+
+.audit-section + .audit-section {
+  margin-top: 16px;
+}
+
+.audit-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.audit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.audit-card {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(127, 158, 201, 0.16);
+  background: rgba(8, 17, 31, 0.42);
+}
+
+.audit-card.succeeded {
+  border-color: rgba(45, 226, 230, 0.2);
+}
+
+.audit-card.failed {
+  border-color: rgba(255, 107, 107, 0.34);
+}
+
+.audit-card.status {
+  border-color: rgba(127, 158, 201, 0.2);
+}
+
+.audit-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.audit-meta,
+.audit-body {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.audit-body + .audit-body {
+  margin-top: 6px;
+}
+
+.audit-body code {
+  color: var(--heading);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.error-copy {
+  color: #ffb3b3;
+}
+
 .alert-list {
   display: grid;
   gap: 12px;

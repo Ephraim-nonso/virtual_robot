@@ -1,12 +1,24 @@
 import { getApiBaseUrl, httpRequest } from './httpClient';
 import { getStoredAuthToken } from '../../features/auth/lib/authStorage';
-import type { MapResponse, RobotStatusResponse, SensorResponse } from '../../types/robot';
+import type {
+  CommandAuditItem,
+  MapResponse,
+  RobotStatusResponse,
+  SensorResponse,
+  StatusAuditItem,
+} from '../../types/robot';
 
 export const getStatus = () => httpRequest<RobotStatusResponse>('/api/robot/status');
 
 export const getMap = () => httpRequest<MapResponse>('/api/robot/map');
 
 export const getSensors = () => httpRequest<SensorResponse>('/api/robot/sensor');
+
+export const getCommandAuditLogs = (limit = 10) =>
+  httpRequest<{ items: CommandAuditItem[] }>(`/api/audit/commands?limit=${limit}`);
+
+export const getStatusAuditLogs = (limit = 10) =>
+  httpRequest<{ items: StatusAuditItem[] }>(`/api/audit/statuses?limit=${limit}`);
 
 export const moveRobot = (x: number, y: number) =>
   httpRequest('/api/robot/move', {
