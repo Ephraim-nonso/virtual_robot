@@ -10,7 +10,7 @@ on:
   pull_request:
 
 jobs:
-  frontend-build-and-lint:
+  frontend-build-lint-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,6 +28,9 @@ jobs:
 
       - name: Lint frontend
         run: npm run lint --workspace frontend
+
+      - name: Test frontend
+        run: npm run test --workspace frontend
 
       - name: Build frontend
         run: npm run build --workspace frontend
