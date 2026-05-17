@@ -7,3 +7,4 @@ coverage
 backend/data/
 data/
 .vercel
+.env*.local
