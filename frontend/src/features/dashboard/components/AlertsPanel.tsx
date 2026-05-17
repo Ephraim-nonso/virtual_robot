@@ -4,11 +4,45 @@ import { useDashboardContext } from '../context/useDashboardContext';
 import { buildDashboardAlerts } from '../lib/alerts';
 
 export const AlertsPanel = () => {
-  const { error, loading, busy, telemetryState, status } = useDashboardContext();
+  const {
+    error,
+    loading,
+    busy,
+    backendStatus,
+    backendIssueMessage,
+    telemetryState,
+    telemetryStatus,
+    telemetryIssueMessage,
+    telemetryReconnectAttempt,
+    status,
+  } = useDashboardContext();
 
   const alerts = useMemo(
-    () => buildDashboardAlerts({ error, loading, busy, telemetryState, status }),
-    [busy, error, loading, status, telemetryState],
+    () =>
+      buildDashboardAlerts({
+        error,
+        loading,
+        busy,
+        backendStatus,
+        backendIssueMessage,
+        telemetryState,
+        telemetryStatus,
+        telemetryIssueMessage,
+        telemetryReconnectAttempt,
+        status,
+      }),
+    [
+      backendIssueMessage,
+      backendStatus,
+      busy,
+      error,
+      loading,
+      status,
+      telemetryIssueMessage,
+      telemetryReconnectAttempt,
+      telemetryState,
+      telemetryStatus,
+    ],
   );
 
   return (

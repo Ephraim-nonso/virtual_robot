@@ -12,7 +12,12 @@ type BuildDashboardAlertsInput = {
   error: string | null;
   loading: boolean;
   busy: boolean;
+  backendStatus: 'syncing' | 'healthy' | 'degraded' | 'unavailable';
+  backendIssueMessage: string | null;
   telemetryState: string;
+  telemetryStatus: 'connecting' | 'live' | 'reconnecting' | 'signal_lost' | 'unavailable';
+  telemetryIssueMessage: string | null;
+  telemetryReconnectAttempt: number;
   status: RobotStatusResponse | null;
 };
 
@@ -20,7 +25,12 @@ export const buildDashboardAlerts = ({
   error,
   loading,
   busy,
+  backendStatus,
+  backendIssueMessage,
   telemetryState,
+  telemetryStatus,
+  telemetryIssueMessage,
+  telemetryReconnectAttempt,
   status,
 }: BuildDashboardAlertsInput): DashboardAlert[] => {
   const alerts: DashboardAlert[] = [];
@@ -41,6 +51,22 @@ export const buildDashboardAlerts = ({
     });
   }
 
+  if (backendStatus === 'unavailable') {
+    alerts.push({
+      title: 'Backend unavailable',
+      message: backendIssueMessage ?? 'The backend API is currently unreachable.',
+      tone: 'critical',
+    });
+  }
+
+  if (backendStatus === 'degraded') {
+    alerts.push({
+      title: 'Backend degraded',
+      message: backendIssueMessage ?? 'The simulator or backend is responding slowly.',
+      tone: 'warning',
+    });
+  }
+
   if (busy) {
     alerts.push({
       title: 'Command executing',
@@ -49,11 +75,35 @@ export const buildDashboardAlerts = ({
     });
   }
 
-  if (telemetryState !== 'Live') {
+  if (telemetryStatus === 'reconnecting') {
     alerts.push({
-      title: 'Telemetry degraded',
-      message: `Telemetry stream is currently ${telemetryState.toLowerCase()}.`,
-      tone: telemetryState === 'Unavailable' ? 'critical' : 'warning',
+      title: 'Telemetry reconnecting',
+      message: `Attempt ${telemetryReconnectAttempt}: re-establishing the websocket stream.`,
+      tone: 'warning',
+    });
+  }
+
+  if (telemetryStatus === 'signal_lost') {
+    alerts.push({
+      title: 'Telemetry signal lost',
+      message: telemetryIssueMessage ?? 'No telemetry packets have arrived recently. A reconnect is in progress.',
+      tone: 'critical',
+    });
+  }
+
+  if (telemetryStatus === 'unavailable') {
+    alerts.push({
+      title: 'Telemetry unavailable',
+      message: telemetryIssueMessage ?? `Telemetry stream is currently ${telemetryState.toLowerCase()}.`,
+      tone: 'critical',
+    });
+  }
+
+  if (telemetryStatus === 'connecting') {
+    alerts.push({
+      title: 'Telemetry connecting',
+      message: 'Waiting for the initial websocket telemetry stream to open.',
+      tone: 'info',
     });
   }
 
