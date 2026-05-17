@@ -55,13 +55,47 @@ The backend runs on `http://localhost:4000` by default.
 npm run test:backend
 ```
 
-## Backend CI
+## CI/CD
 
-GitHub Actions now runs a backend-only CI workflow on pushes and pull requests. The workflow:
+GitHub Actions now supports both CI and frontend deployment flows:
 
-- installs workspace dependencies
-- builds the backend TypeScript project
-- runs the backend Vitest suite
+- `backend-ci.yml`
+  - installs workspace dependencies
+  - builds the backend TypeScript project
+  - runs the backend Vitest suite
+
+- `frontend-ci.yml`
+  - installs workspace dependencies
+  - lints the frontend
+  - builds the frontend production bundle
+
+- `vercel-deploy.yml`
+  - deploys frontend preview builds to Vercel for pull requests against `master`
+  - deploys the frontend production build to Vercel on pushes to `master`
+
+### GitHub Secrets For Vercel Deployment
+
+Add these repository secrets before enabling the Vercel deployment workflow:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+### Frontend Environment Variables
+
+The frontend needs a reachable backend URL in production. Set these in the Vercel project environment:
+
+- `VITE_API_BASE_URL`
+- `VITE_WS_BASE_URL`
+
+Example values:
+
+```env
+VITE_API_BASE_URL=https://your-backend-domain.example.com
+VITE_WS_BASE_URL=wss://your-backend-domain.example.com
+```
+
+The frontend Vercel configuration lives in `frontend/vercel.json` and includes SPA rewrites for `/login` and `/dashboard`.
 
 ## Backend Environment Variables
 
@@ -109,7 +143,7 @@ curl -X POST http://localhost:4000/api/robot/move \
 
 The backend now provides JWT-based authentication and role-based access control.
 
-- new registrations create `VIEWER` accounts
+- new registrations can choose `VIEWER` or `COMMANDER`
 - a seed `COMMANDER` account is created at startup from the environment variables above
 - `VIEWER` and `COMMANDER` can access:
   - `GET /api/auth/me`
@@ -126,7 +160,7 @@ The backend now provides JWT-based authentication and role-based access control.
 ```bash
 curl -X POST http://localhost:4000/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"Viewer One","email":"viewer@example.com","password":"password123"}'
+  -d '{"name":"Viewer One","email":"viewer@example.com","password":"password123","role":"VIEWER"}'
 ```
 
 ### Example Login
