@@ -12,7 +12,7 @@ const server = http.createServer(app);
 
 attachTelemetryProxy(server);
 
-server.listen(config.port, () => {
-  console.log(`Backend listening on http://localhost:${config.port}`);
+server.listen(config.port, config.host, () => {
+  console.log(`Backend listening on ${config.host}:${config.port}`);
   console.log(`Proxying robot simulator from ${config.robotSimUrl}`);
 });

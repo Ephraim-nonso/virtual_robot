@@ -20,17 +20,17 @@ const simulatorRequestOptions: SimulatorRequestOptions = {
 const requestSimulator = (path: string, init?: RequestInit) =>
   simulatorRequest(config.robotSimUrl, path, init, simulatorRequestOptions);
 
-const safeAuditWrite = (description: string, operation: () => void) => {
+const safeAuditWrite = async (description: string, operation: () => Promise<unknown>) => {
   try {
-    operation();
+    await operation();
   } catch (error) {
     console.error(`Audit logging failed during ${description}.`, error);
   }
 };
 
-const recordStatusSnapshot = (source: string, payload: unknown) => {
-  safeAuditWrite(`status snapshot for ${source}`, () => {
-    recordStatusAuditLog({
+const recordStatusSnapshot = async (source: string, payload: unknown) => {
+  await safeAuditWrite(`status snapshot for ${source}`, async () => {
+    await recordStatusAuditLog({
       source,
       payload: parseRobotStatus(payload),
     });
@@ -40,21 +40,21 @@ const recordStatusSnapshot = (source: string, payload: unknown) => {
 const captureCurrentStatusSnapshot = async (source: string) => {
   try {
     const statusPayload = await requestSimulator('/api/status');
-    recordStatusSnapshot(source, statusPayload);
+    await recordStatusSnapshot(source, statusPayload);
   } catch (error) {
     console.error(`Unable to capture audit status snapshot for ${source}.`, error);
   }
 };
 
-const recordCommandAudit = (input: {
+const recordCommandAudit = async (input: {
   commandType: string;
   requestPayload?: unknown;
   resultStatus: 'SUCCEEDED' | 'FAILED';
   responsePayload?: unknown;
   errorMessage?: string;
 }) => {
-  safeAuditWrite(`command ${input.commandType}`, () => {
-    recordCommandAuditLog({
+  await safeAuditWrite(`command ${input.commandType}`, async () => {
+    await recordCommandAuditLog({
       actor: config.auditDefaultActor,
       ...input,
     });
@@ -63,7 +63,7 @@ const recordCommandAudit = (input: {
 
 export const getHealthPayload = async () => {
   const upstreamStatus = await requestSimulator('/api/status');
-  recordStatusSnapshot('health', upstreamStatus);
+  await recordStatusSnapshot('health', upstreamStatus);
 
   return {
     ok: true,
@@ -84,7 +84,7 @@ export const executeRobotCommand = async (input: {
 }) => {
   try {
     const responsePayload = await requestSimulator(input.simulatorPath, input.requestInit);
-    recordCommandAudit({
+    await recordCommandAudit({
       commandType: input.commandType,
       requestPayload: input.requestPayload,
       responsePayload,
@@ -93,7 +93,7 @@ export const executeRobotCommand = async (input: {
     await captureCurrentStatusSnapshot(input.statusSnapshotSource);
     return responsePayload;
   } catch (error) {
-    recordCommandAudit({
+    await recordCommandAudit({
       commandType: input.commandType,
       requestPayload: input.requestPayload,
       resultStatus: 'FAILED',
@@ -103,6 +103,6 @@ export const executeRobotCommand = async (input: {
   }
 };
 
-export const getCommandAuditItems = (limit?: number) => listCommandAuditLogs(limit);
+export const getCommandAuditItems = async (limit?: number) => listCommandAuditLogs(limit);
 
-export const getStatusAuditItems = (limit?: number) => listStatusAuditLogs(limit);
+export const getStatusAuditItems = async (limit?: number) => listStatusAuditLogs(limit);

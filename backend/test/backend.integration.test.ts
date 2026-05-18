@@ -1,5 +1,3 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import http from 'node:http';
 import { once } from 'node:events';
 
@@ -8,11 +6,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 
 import { createFakeSimulator } from './helpers/fakeSimulator.js';
-import { createTempDir, withEnv } from './helpers/testEnv.js';
+import { mockDatabaseModule } from './helpers/mockDatabase.js';
+import { withEnv } from './helpers/testEnv.js';
 
 type RunningBackend = {
   request: request.SuperTest<request.Test>;
   baseUrl: string;
+  query: <TRow extends Record<string, unknown>>(text: string, values?: unknown[]) => Promise<{
+    rows: TRow[];
+  }>;
   close: () => Promise<void>;
 };
 
@@ -20,6 +22,7 @@ const startBackend = async (values: Record<string, string>): Promise<RunningBack
   withEnv(values, async () => {
     const { createApp } = await import('../src/app.js');
     const { initializeBackend } = await import('../src/bootstrap.js');
+    const { closeDatabase, query } = await import('../src/database.js');
     const { attachTelemetryProxy } = await import('../src/realtime/telemetryProxy.js');
     await initializeBackend();
     const server = http.createServer(createApp());
@@ -35,15 +38,19 @@ const startBackend = async (values: Record<string, string>): Promise<RunningBack
     return {
       request: request(server),
       baseUrl: `http://127.0.0.1:${address.port}`,
+      query,
       close: async () => {
         server.close();
         await once(server, 'close');
+        await closeDatabase();
       },
     };
   });
 
 describe('backend integration', () => {
   let cleanup: Array<() => Promise<void>> = [];
+
+  mockDatabaseModule();
 
   afterEach(async () => {
     for (const close of cleanup.reverse()) {
@@ -53,14 +60,12 @@ describe('backend integration', () => {
   });
 
   it('supports auth, RBAC, audit logging, and websocket telemetry', async () => {
-    const tempDir = await createTempDir('vrm-backend-integration-');
     const simulator = await createFakeSimulator();
     cleanup.push(simulator.close);
 
     const backend = await startBackend({
       ROBOT_SIM_URL: simulator.baseUrl,
-      DATABASE_PATH: path.join(tempDir, 'audit.db'),
-      AUTH_USERS_FILE_PATH: path.join(tempDir, 'users.json'),
+      DATABASE_URL: 'postgres://test:test@127.0.0.1:5432/vrm_backend_integration',
       AUTH_JWT_SECRET: 'integration-secret',
       SEED_COMMANDER_PASSWORD: 'commander-secret',
       AUDIT_DEFAULT_ACTOR: 'integration-test',
@@ -119,6 +124,10 @@ describe('backend integration', () => {
     expect(commanderReset.status).toBe(200);
     expect(simulator.counts.reset).toBe(1);
 
+    const liveHealth = await backend.request.get('/health/live');
+    expect(liveHealth.status).toBe(200);
+    expect(liveHealth.body).toEqual({ ok: true });
+
     const health = await backend.request.get('/health');
     expect(health.status).toBe(200);
 
@@ -139,10 +148,14 @@ describe('backend integration', () => {
     expect(statusAudit.status).toBe(200);
     expect(statusAudit.body.items.length).toBeGreaterThan(0);
 
-    const storedUsers = JSON.parse(
-      await fs.readFile(path.join(tempDir, 'users.json'), 'utf8'),
-    ) as { users: Array<{ email: string }> };
-    expect(storedUsers.users.map((user) => user.email)).toEqual(
+    const storedUsers = await backend.query<{ email: string }>(
+      `
+        SELECT email
+        FROM users
+        ORDER BY email ASC
+      `,
+    );
+    expect(storedUsers.rows.map((user) => user.email)).toEqual(
       expect.arrayContaining(['commander@example.com', 'viewer@example.com']),
     );
 
@@ -174,14 +187,12 @@ describe('backend integration', () => {
   });
 
   it('returns timeout and retry metadata when the simulator is too slow', async () => {
-    const tempDir = await createTempDir('vrm-backend-timeout-');
     const simulator = await createFakeSimulator({ statusDelayMs: 200 });
     cleanup.push(simulator.close);
 
     const backend = await startBackend({
       ROBOT_SIM_URL: simulator.baseUrl,
-      DATABASE_PATH: path.join(tempDir, 'audit.db'),
-      AUTH_USERS_FILE_PATH: path.join(tempDir, 'users.json'),
+      DATABASE_URL: 'postgres://test:test@127.0.0.1:5432/vrm_backend_timeout',
       AUTH_JWT_SECRET: 'integration-secret',
       SIMULATOR_REQUEST_TIMEOUT_MS: '25',
       SIMULATOR_READ_RETRY_COUNT: '2',

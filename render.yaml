@@ -1,0 +1,54 @@
+services:
+  - type: pserv
+    name: robot-simulator
+    runtime: image
+    plan: starter
+    image:
+      url: ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest
+    envVars:
+      - key: PORT
+        value: 5000
+
+  - type: web
+    name: backend
+    runtime: node
+    plan: starter
+    healthCheckPath: /health/live
+    buildCommand: npm install && npm run build --workspace backend
+    startCommand: npm run start --workspace backend
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: virtual-robot-management-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: false
+      - key: ROBOT_SIM_HOSTPORT
+        fromService:
+          name: robot-simulator
+          type: pserv
+          property: hostport
+      - key: AUTH_JWT_SECRET
+        sync: false
+      - key: AUTH_TOKEN_EXPIRY
+        value: 8h
+      - key: SEED_COMMANDER_NAME
+        value: Commander
+      - key: SEED_COMMANDER_EMAIL
+        value: commander@example.com
+      - key: SEED_COMMANDER_PASSWORD
+        sync: false
+      - key: AUDIT_DEFAULT_ACTOR
+        value: system
+      - key: SIMULATOR_REQUEST_TIMEOUT_MS
+        value: 3000
+      - key: SIMULATOR_READ_RETRY_COUNT
+        value: 2
+      - key: SIMULATOR_READ_RETRY_DELAY_MS
+        value: 400
+
+databases:
+  - name: virtual-robot-management-db
+    plan: basic-1gb
