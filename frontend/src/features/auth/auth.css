@@ -1,11 +1,18 @@
 .auth-layout {
   display: grid;
-  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .auth-panel {
   align-content: start;
+}
+
+.auth-form-panel {
+  order: 1;
+}
+
+.auth-rbac-panel {
+  order: 2;
 }
 
 .auth-form {
@@ -14,20 +21,21 @@
 }
 
 .auth-mode-switch {
-  display: inline-grid;
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 16px;
 }
 
 .auth-mode-button {
-  border: 1px solid rgba(127, 158, 201, 0.16);
-  background: rgba(8, 17, 31, 0.42);
+  border: 1px solid rgba(10, 19, 37, 0.12);
+  background: rgba(10, 19, 37, 0.04);
+  color: var(--heading);
 }
 
 .auth-mode-button.active {
-  border-color: rgba(95, 111, 255, 0.4);
-  background: rgba(95, 111, 255, 0.18);
+  border-color: rgba(75, 205, 233, 0.28);
+  background: rgba(75, 205, 233, 0.16);
 }
 
 .auth-form label {
@@ -39,12 +47,7 @@
 }
 
 .auth-form select {
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--heading);
-  border-radius: 14px;
-  padding: 12px 14px;
-  font: inherit;
+  appearance: none;
 }
 
 .auth-form button {
@@ -59,8 +62,9 @@
 .auth-success-banner {
   margin-top: 12px;
   margin-bottom: 0;
-  border-color: rgba(45, 226, 230, 0.3);
-  color: #b7f0ff;
+  border-color: rgba(75, 205, 233, 0.22);
+  background: rgba(75, 205, 233, 0.1);
+  color: rgb(10, 19, 37);
 }
 
 .auth-role-grid {
@@ -71,9 +75,9 @@
 
 .auth-role-card {
   padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(127, 158, 201, 0.16);
-  background: rgba(8, 17, 31, 0.42);
+  border-radius: 22px;
+  border: 1px solid rgba(10, 19, 37, 0.08);
+  background: rgba(75, 205, 233, 0.06);
 }
 
 .auth-role-card strong {
@@ -87,7 +91,6 @@
 }
 
 @media (max-width: 960px) {
-  .auth-layout,
   .auth-role-grid {
     grid-template-columns: 1fr;
   }

@@ -2,24 +2,44 @@ import { Navigate, Outlet } from 'react-router-dom';
 
 import '../features/auth/auth.css';
 import { AppShell } from './AppShell';
-import { RobotHeroIllustration } from './RobotHeroIllustration';
-import { AuthMetrics } from '../features/auth/components/AuthMetrics';
 import { useAuthContext } from '../features/auth/context/useAuthContext';
 
 const AuthLoadingScreen = () => (
-  <AppShell heroVisual={<RobotHeroIllustration />} metrics={<AuthMetrics />}>
-    <section className="auth-layout">
-      <article className="panel auth-panel">
-        <div className="panel-header">
+  <AppShell>
+    <section className="marketing-shell">
+      <header className="topbar public-topbar">
+        <div className="brand-lockup">
+          <span className="brand-mark">VR</span>
+          <div>
+            <p className="eyebrow">Virtual Robot Management</p>
+            <strong>Ground control access</strong>
+          </div>
+        </div>
+      </header>
+
+      <section className="login-hero">
+        <div className="login-copy">
           <div>
             <p className="eyebrow">Authentication</p>
-            <h2>Restoring session</h2>
-            <p className="panel-subcopy">
-              Checking for a saved frontend session before loading protected robot APIs.
+            <h1>Restoring operator session.</h1>
+            <p className="hero-copy">
+              Checking for a saved frontend session before loading protected robot APIs and commander controls.
             </p>
           </div>
         </div>
-      </article>
+
+        <section className="auth-layout">
+          <article className="panel auth-panel auth-form-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Authentication</p>
+                <h2>Restoring session</h2>
+                <p className="panel-subcopy">Verifying saved credentials and routing you to mission control.</p>
+              </div>
+            </div>
+          </article>
+        </section>
+      </section>
     </section>
   </AppShell>
 );

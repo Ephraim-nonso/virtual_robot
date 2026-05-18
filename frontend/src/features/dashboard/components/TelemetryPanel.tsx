@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { formatRelativeTime } from '../lib/formatters';
 import { useDashboardContext } from '../context/useDashboardContext';
 
@@ -23,8 +25,17 @@ export const TelemetryPanel = () => {
             ? `${telemetryPacketCount} packets received, latest ${formatRelativeTime(lastTelemetryAt)}`
             : 'Waiting for the first telemetry packet';
 
+  const telemetryPreview = useMemo(() => {
+    if (!telemetry) {
+      return 'Waiting for telemetry packets...';
+    }
+
+    const lines = JSON.stringify(telemetry, null, 2).split('\n');
+    return `${lines.slice(0, 4).join('\n')}${lines.length > 4 ? '\n...' : ''}`;
+  }, [telemetry]);
+
   return (
-    <article className="panel">
+    <article className="panel telemetry-panel">
       <div className="panel-header">
         <div>
           <p className="eyebrow">Streaming</p>
@@ -34,9 +45,14 @@ export const TelemetryPanel = () => {
         <span className={`caption telemetry-status-badge ${telemetryStatus}`}>{telemetryState}</span>
       </div>
 
-      <pre className="telemetry-box">
-        {telemetry ? JSON.stringify(telemetry, null, 2) : 'Waiting for telemetry packets...'}
-      </pre>
+      <pre className="telemetry-preview-box">{telemetryPreview}</pre>
+
+      <details className="panel-disclosure telemetry-disclosure">
+        <summary>{telemetry ? 'Expand full telemetry payload' : 'Telemetry payload unavailable'}</summary>
+        <pre className="telemetry-box">
+          {telemetry ? JSON.stringify(telemetry, null, 2) : 'Waiting for telemetry packets...'}
+        </pre>
+      </details>
     </article>
   );
 };

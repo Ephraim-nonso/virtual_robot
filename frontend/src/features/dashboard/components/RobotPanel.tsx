@@ -32,8 +32,8 @@ export const RobotPanel = () => {
     <article className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Commander Controls</p>
-          <h2>Move and reset</h2>
+          <p className="eyebrow">Mission control</p>
+          <h2>Robot command center</h2>
           <p className="panel-subcopy">
             {isPolling ? 'Refreshing live robot status...' : `Last synced ${formatRelativeTime(lastUpdatedAt)}`}
           </p>
@@ -44,7 +44,7 @@ export const RobotPanel = () => {
       </div>
 
       {status ? (
-        <div className="stats-grid status-grid">
+        <div className="stats-grid status-grid compact-stats-grid">
           <div className="stat-box">
             <span>Robot ID</span>
             <strong>{status.id}</strong>
@@ -72,9 +72,9 @@ export const RobotPanel = () => {
 
       {isCommander ? (
         <div className="control-callout">
-          <strong>Control endpoints</strong>
+          <strong>Commander access active</strong>
           <p>
-            Send move commands to `POST /api/robot/move` and reset the simulator with `POST /api/robot/reset`.
+            Send move commands and reset the simulator from a single control surface without leaving the dashboard.
           </p>
         </div>
       ) : (
