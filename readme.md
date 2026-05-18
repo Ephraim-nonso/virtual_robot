@@ -107,7 +107,7 @@ SEED_COMMANDER_PASSWORD=change-me
 The repository now includes a root `render.yaml` Blueprint that provisions three Render resources together:
 
 - a Render Postgres database: `virtual-robot-management-db`
-- a private service for the simulator image: `robot-simulator`
+- a free web service for the simulator image: `robot-simulator`
 - a public web service for the API: `backend`
 
 The simulator runs from the existing image:
@@ -115,6 +115,7 @@ The simulator runs from the existing image:
 - `ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest`
 
 The backend uses `/health/live` for Render healthchecks so it can deploy even if the simulator service is still starting.
+The simulator uses `/api/status` for its Render healthcheck.
 
 ### Backend Variables On Render
 
@@ -133,7 +134,8 @@ The Blueprint also wires:
 1. Install and authenticate the CLI:
 
 ```bash
-npm install -g @render/cli
+brew update
+brew install render
 render login
 ```
 
@@ -166,6 +168,20 @@ Use the CLI to inspect service metadata and find the backend URL:
 render services --output json
 ```
 
+### Free Tier Notes
+
+This Blueprint is configured to work with Render's free services:
+
+- `backend` uses `plan: free`
+- `robot-simulator` uses `plan: free`
+- `virtual-robot-management-db` uses `plan: free`
+
+Important limitations of this setup:
+
+- free web services spin down after inactivity and can take time to wake up again
+- free Render Postgres instances expire after 30 days unless upgraded
+- the simulator is a public web service on the free tier because Render free plans do not support private services
+
 ### Services Created By The Blueprint
 
 - `backend`
@@ -176,12 +192,13 @@ render services --output json
 - healthcheck: `/health/live`
 
 - `robot-simulator`
-- private service
+- free web service
 - image source: `ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest`
 - internal port: `5000`
+- healthcheck: `/api/status`
 
 - `virtual-robot-management-db`
-- Render Postgres database
+- free Render Postgres database
 
 ## Backend REST API
 

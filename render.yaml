@@ -1,8 +1,9 @@
 services:
-  - type: pserv
+  - type: web
     name: robot-simulator
     runtime: image
-    plan: starter
+    plan: free
+    healthCheckPath: /api/status
     image:
       url: ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest
     envVars:
@@ -12,7 +13,7 @@ services:
   - type: web
     name: backend
     runtime: node
-    plan: starter
+    plan: free
     healthCheckPath: /health/live
     buildCommand: npm install && npm run build --workspace backend
     startCommand: npm run start --workspace backend
@@ -28,7 +29,7 @@ services:
       - key: ROBOT_SIM_HOSTPORT
         fromService:
           name: robot-simulator
-          type: pserv
+          type: web
           property: hostport
       - key: AUTH_JWT_SECRET
         sync: false
@@ -51,4 +52,4 @@ services:
 
 databases:
   - name: virtual-robot-management-db
-    plan: basic-1gb
+    plan: free
