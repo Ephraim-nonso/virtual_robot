@@ -15,6 +15,12 @@ const commanderAccess = requireAuth('COMMANDER');
 export const createRobotRouter = () => {
   const router = Router();
 
+  router.get('/health/live', (_request, response) => {
+    response.json({
+      ok: true,
+    });
+  });
+
   router.get(
     '/health',
     asyncHandler(async (_request, response) => {

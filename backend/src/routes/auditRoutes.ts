@@ -22,7 +22,7 @@ export const createAuditRouter = () => {
     readAccess,
     asyncHandler(async (request, response) => {
       response.json({
-        items: getCommandAuditItems(parseAuditLimit(request.query.limit)),
+        items: await getCommandAuditItems(parseAuditLimit(request.query.limit)),
       });
     }),
   );
@@ -32,7 +32,7 @@ export const createAuditRouter = () => {
     readAccess,
     asyncHandler(async (request, response) => {
       response.json({
-        items: getStatusAuditItems(parseAuditLimit(request.query.limit)),
+        items: await getStatusAuditItems(parseAuditLimit(request.query.limit)),
       });
     }),
   );

@@ -32,7 +32,7 @@ export const registerViewer = async (input: {
   });
 
 export const loginUser = async (input: { email: string; password: string }) => {
-  const user = findUserByEmail(input.email);
+  const user = await findUserByEmail(input.email);
 
   if (!user) {
     throw new AuthenticationError('Invalid email or password.');

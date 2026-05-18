@@ -1,7 +1,7 @@
 import { initializeAuth } from './auth/service.js';
-import { getDatabase } from './database.js';
+import { initializeDatabase } from './database.js';
 
 export const initializeBackend = async () => {
-  getDatabase();
+  await initializeDatabase();
   await initializeAuth();
 };
