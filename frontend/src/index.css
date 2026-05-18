@@ -1,5 +1,5 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   font-family:
     Inter,
     system-ui,
@@ -14,16 +14,16 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --bg: #060b16;
-  --surface: rgba(9, 16, 30, 0.88);
-  --panel: rgba(14, 24, 42, 0.96);
-  --border: rgba(127, 158, 201, 0.2);
-  --heading: #f5f8ff;
-  --text: #d6dff4;
-  --muted: #8da0c9;
-  --accent: #5f6fff;
-  --accent-strong: #2de2e6;
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+  --bg: #f6fbff;
+  --surface: rgba(255, 255, 255, 0.94);
+  --panel: #ffffff;
+  --border: rgba(10, 19, 37, 0.1);
+  --heading: rgb(10, 19, 37);
+  --text: rgba(10, 19, 37, 0.84);
+  --muted: rgba(10, 19, 37, 0.58);
+  --accent: #4bcde9;
+  --accent-strong: rgb(10, 19, 37);
+  --shadow: 0 22px 60px rgba(10, 19, 37, 0.08);
 }
 
 * {
@@ -32,8 +32,8 @@
 
 html {
   background:
-    radial-gradient(circle at top left, rgba(95, 111, 255, 0.2), transparent 30%),
-    radial-gradient(circle at top right, rgba(45, 226, 230, 0.16), transparent 25%),
+    radial-gradient(circle at top left, rgba(75, 205, 233, 0.14), transparent 26%),
+    radial-gradient(circle at top right, rgba(10, 19, 37, 0.05), transparent 24%),
     var(--bg);
 }
 
@@ -67,8 +67,8 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(2.4rem, 5vw, 4.4rem);
-  max-width: 12ch;
+  font-size: clamp(2.6rem, 5vw, 4.8rem);
+  max-width: 11ch;
   margin-bottom: 12px;
 }
 

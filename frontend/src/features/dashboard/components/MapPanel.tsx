@@ -4,11 +4,11 @@ export const MapPanel = () => {
   const { map, status } = useDashboardContext();
 
   return (
-    <article className="panel">
+    <article className="panel map-panel">
       <div className="panel-header">
         <div>
           <p className="eyebrow">Environment</p>
-          <h2>Map</h2>
+          <h2>Environment grid</h2>
           {status ? (
             <p className="panel-subcopy">
               Robot currently at ({status.position.x}, {status.position.y})

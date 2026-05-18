@@ -1,54 +1,64 @@
-import { useAuthContext } from '../../auth/context/useAuthContext';
-import { useDashboardContext } from '../context/useDashboardContext';
+import { useAuthContext } from "../../auth/context/useAuthContext";
+import { useDashboardContext } from "../context/useDashboardContext";
 
 const navItems = [
-  { label: 'Overview', state: 'Online' },
-  { label: 'Robot Status', state: 'Tracking' },
-  { label: 'Navigation Map', state: 'Ready' },
-  { label: 'Telemetry Feed', state: 'Streaming' },
-  { label: 'Alert Queue', state: 'Watching' },
+  { label: "Mission Control", state: "Live operations" },
+  { label: "Robot Status", state: "Live status" },
+  { label: "Navigation", state: "Grid tracking" },
+  { label: "Telemetry", state: "Realtime feed" },
+  { label: "Mission History", state: "Audit ready" },
 ];
 
 export const DashboardSidebar = () => {
   const { status, telemetryState, map, sensors } = useDashboardContext();
-  const { user, logout } = useAuthContext();
+  const { user } = useAuthContext();
 
   return (
     <aside className="dashboard-sidebar panel">
+      <section className="sidebar-section">
+        <p className="eyebrow">Mission control</p>
+        <h2>Operator overview</h2>
+        <p className="panel-subcopy">
+          Operator's robot information
+        </p>
+      </section>
+
       <nav className="dashboard-nav" aria-label="Ground control sections">
         {navItems.map((item, index) => (
-          <div key={item.label} className={`dashboard-nav-item ${index === 0 ? 'active' : ''}`}>
+          <div
+            key={item.label}
+            className={`dashboard-nav-item ${index === 0 ? "active" : ""}`}
+          >
             <span>{item.label}</span>
-            <strong>{item.label === 'Telemetry Feed' ? telemetryState : item.state}</strong>
+            <strong>
+              {item.label === "Telemetry" ? telemetryState : item.state}
+            </strong>
           </div>
         ))}
       </nav>
 
-      <div className="sidebar-stat-list">
+      <section className="sidebar-section sidebar-stat-list">
         <div>
           <span>Operator</span>
-          <strong>{user?.name ?? '--'}</strong>
+          <strong>{user?.name ?? "--"}</strong>
         </div>
         <div>
           <span>Role</span>
-          <strong>{user?.role ?? '--'}</strong>
+          <strong>{user?.role ?? "--"}</strong>
         </div>
         <div>
-          <span>Robot</span>
-          <strong>{status?.id ?? '--'}</strong>
+          <span>Robot ID</span>
+          <strong>{status?.id ?? "--"}</strong>
         </div>
         <div>
           <span>Grid</span>
-          <strong>{map ? `${map.width} x ${map.height}` : '--'}</strong>
+          <strong>{map ? `${map.width} x ${map.height}` : "--"}</strong>
         </div>
         <div>
           <span>Sensors</span>
-          <strong>{sensors ? `${sensors.lidar.length} samples` : '--'}</strong>
+          <strong>{sensors ? `${sensors.lidar.length} samples` : "--"}</strong>
         </div>
-        <button className="ghost-button sidebar-logout-button" onClick={logout}>
-          Sign out
-        </button>
-      </div>
+      </section>
     </aside>
   );
 };

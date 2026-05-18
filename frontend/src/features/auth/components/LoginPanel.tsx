@@ -42,7 +42,7 @@ export const LoginPanel = () => {
 
   return (
     <section className="auth-layout">
-      <article className="panel auth-panel">
+      <article className="panel auth-panel auth-form-panel">
         <div className="panel-header">
           <div>
             <p className="eyebrow">Authentication</p>
@@ -116,11 +116,12 @@ export const LoginPanel = () => {
         {error ? <div className="banner error auth-error-banner">{error}</div> : null}
       </article>
 
-      <article className="panel auth-panel">
+      <article className="panel auth-panel auth-rbac-panel">
         <div className="panel-header">
           <div>
             <p className="eyebrow">Access Rules</p>
-            <h2>Frontend RBAC</h2>
+            <h2>Role permissions</h2>
+            <p className="panel-subcopy">Choose the access pattern that matches the operator you are onboarding.</p>
           </div>
         </div>
 
