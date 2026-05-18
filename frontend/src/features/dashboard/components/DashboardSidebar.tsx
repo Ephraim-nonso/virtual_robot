@@ -10,8 +10,7 @@ const navItems = [
 ];
 
 export const DashboardSidebar = () => {
-  const { status, telemetryState, map, sensors, backendState } =
-    useDashboardContext();
+  const { status, telemetryState, map, sensors } = useDashboardContext();
   const { user } = useAuthContext();
 
   return (
