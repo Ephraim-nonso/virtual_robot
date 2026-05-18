@@ -1,5 +1,62 @@
 services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - backend
+    environment:
+      BACKEND_UPSTREAM: http://backend:4000
+    ports:
+      - "3000:80"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      robot-simulator:
+        condition: service_started
+    environment:
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/virtual_robot_management
+      DATABASE_SSL: "false"
+      ROBOT_SIM_URL: http://robot-simulator:5000
+      AUTH_JWT_SECRET: change-me-in-env
+      AUTH_TOKEN_EXPIRY: 8h
+      SEED_COMMANDER_NAME: Commander
+      SEED_COMMANDER_EMAIL: commander@example.com
+      SEED_COMMANDER_PASSWORD: change-me
+      AUDIT_DEFAULT_ACTOR: system
+      SIMULATOR_REQUEST_TIMEOUT_MS: 3000
+      SIMULATOR_READ_RETRY_COUNT: 2
+      SIMULATOR_READ_RETRY_DELAY_MS: 400
+    ports:
+      - "4000:4000"
+
   robot-simulator:
     image: ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest
     ports:
       - "5001:5000"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: virtual_robot_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d virtual_robot_management"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

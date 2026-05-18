@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.github
+.cursor
+.vercel
+coverage
+*.log
+.DS_Store
+frontend/.env
+backend/.env

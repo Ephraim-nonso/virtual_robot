@@ -6,7 +6,7 @@ This repository is a monorepo for a Ground Control Station web application that 
 
 - `backend/` - Express TypeScript backend adapter
 - `frontend/` - React frontend
-- `compose.yaml` - local simulator container
+- `compose.yaml` - local full-stack container orchestration
 
 ## Local Setup
 
@@ -16,15 +16,23 @@ This repository is a monorepo for a Ground Control Station web application that 
 npm install
 ```
 
-2. Start the simulator:
+2. Start the local development services:
 
 ```bash
 docker compose up -d
 ```
 
-3. Start the backend:
+This brings up:
+
+- `frontend` at `http://localhost:3000`
+- `backend` at `http://localhost:4000`
+- `robot-simulator` at `http://localhost:5001`
+- `postgres` at `localhost:5432`
+
+3. For code-first local development, you can still run the app workspaces directly:
 
 ```bash
+npm run dev:frontend
 npm run dev:backend
 ```
 
@@ -35,6 +43,44 @@ The backend runs on `http://localhost:4000` by default.
 ```bash
 npm run test:backend
 ```
+
+## Containerization
+
+The repository now includes container artifacts for the full stack:
+
+- `backend/Dockerfile` - production backend image
+- `frontend/Dockerfile` - production frontend image served by Nginx
+- `frontend/docker/default.conf.template` - SPA + API/WebSocket reverse proxy
+- `.dockerignore` - shared Docker build exclusions
+- `compose.yaml` - orchestrates `frontend`, `backend`, `postgres`, and `robot-simulator`
+
+### Start The Full Stack
+
+```bash
+npm run docker:up
+```
+
+or:
+
+```bash
+docker compose up --build
+```
+
+### Stop The Full Stack
+
+```bash
+npm run docker:down
+```
+
+### Container Networking
+
+Inside the container stack:
+
+- the frontend proxies `/api`, `/health`, and `/ws` to the backend container
+- the backend connects to Postgres using `postgres:5432`
+- the backend connects to the simulator using `http://robot-simulator:5000`
+
+This makes the stack portable for platforms such as AWS or Azure container services where the app, API, database, and simulator can run as separate containers on the same network.
 
 ## CI/CD
 

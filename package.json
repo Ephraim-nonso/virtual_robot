@@ -12,7 +12,9 @@
     "build": "npm run build --workspace backend && npm run build --workspace frontend",
     "lint": "npm run lint --workspace frontend",
     "test:backend": "npm --workspace backend run test",
-    "test:frontend": "npm --workspace frontend run test"
+    "test:frontend": "npm --workspace frontend run test",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down -v"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
