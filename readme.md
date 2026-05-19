@@ -12,54 +12,76 @@ This repository is a monorepo for a Ground Control Station web application that 
 
 ## Local Setup
 
-The local setup is designed around one external dependency: the Virtual Robot simulator container image. The frontend and backend run from the workspace during development, while Docker Compose is used to start the simulator image locally.
-
-### 1. Install dependencies
+The project is fully containerized for local use with Docker Compose. This starts the frontend, backend, PostgreSQL database, and the Virtual Robot simulator together so the system behaves much closer to its deployed shape.
 
 ```bash
 npm install
+npm run docker:up
 ```
 
-### 2. Start the simulator container image
-
-The local `compose.yaml` starts the provided simulator image:
-
-- image: `ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest`
-- exposed locally at `http://localhost:5001`
-
-Start it with:
+or:
 
 ```bash
-docker compose up -d
+docker compose up --build
 ```
 
-### 3. Start the backend
+This launches:
+
+- `frontend` on `http://localhost:3000`
+- `backend` on `http://localhost:4000`
+- `robot-simulator` on `http://localhost:5001`
+- `postgres` on `localhost:5432`
+
+The root `package.json` also provides a shutdown command:
 
 ```bash
-npm run dev:frontend
+npm run docker:down
+```
+
+### Docker Compose is designed as:
+
+The local `compose.yaml` orchestrates the whole application:
+
+- `frontend`
+  - built from the local frontend container definition
+  - exposed on port `3000`
+  - routes browser traffic to the backend container
+- `backend`
+  - built from the local backend container definition
+  - exposed on port `4000`
+  - connects to Postgres and the simulator over the internal Docker network
+- `postgres`
+  - uses `postgres:16-alpine`
+  - persists data in a named Docker volume
+  - stores users and audit history
+- `robot-simulator`
+  - runs `ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest`
+  - exposed locally on `http://localhost:5001`
+
+
+### Alternative way to spin project for development
+
+If you want to work on the frontend and backend directly from the workspace instead of the containerized stack, you can still run them in development mode and keep the simulator in Docker:
+
+```bash
+npm install
+docker compose up -d robot-simulator postgres
 npm run dev:backend
-```
-
-The backend runs on `http://localhost:4000` by default.
-
-### 4. Start the frontend
-
-```bash
 npm run dev:frontend
 ```
 
-The frontend runs on the Vite development server and uses the backend as its application API.
+The backend runs on `http://localhost:4000` by default, and the frontend runs on the Vite development server.
 
-### 5. Local environment variables
+### Local environment variables
 
-Frontend environment variables:
+Frontend environment variables for production-style routing:
 
 ```env
 VITE_API_BASE_URL=https://your-backend-domain.example.com
 VITE_WS_BASE_URL=wss://your-backend-domain.example.com
 ```
 
-In local development these can be left unset when using a local proxy or configured explicitly if the backend is remote.
+In the fully containerized local setup, these are not required in the same way as Vercel because the frontend container is wired to the backend through Docker networking. In code-first local development they can be left unset when using local routing, or set explicitly if the frontend should target a remote backend.
 
 Backend environment variables:
 
@@ -81,7 +103,13 @@ SIMULATOR_READ_RETRY_DELAY_MS=400
 AUDIT_DEFAULT_ACTOR=system
 ```
 
-`ROBOT_SIM_URL` points directly to the simulator and takes precedence over `ROBOT_SIM_HOSTPORT`. `ROBOT_SIM_HOSTPORT` is mainly useful in hosted environments such as Render where the backend should talk to the simulator using an internal service address.
+For the full local container stack, the backend is configured to use:
+
+- `DATABASE_URL=postgresql://postgres:postgres@postgres:5432/virtual_robot_management`
+- `ROBOT_SIM_URL=http://robot-simulator:5000`
+
+For non-container local development, `ROBOT_SIM_URL=http://127.0.0.1:5001` remains the normal fallback.
+
 
 ## CI/CD
 
@@ -138,7 +166,7 @@ These must be configured in GitHub before the deployment workflow can run succes
 
 GitHub Actions are most effective when paired with repository rulesets or branch protection rules. The expected repository policy for `master` is to require the CI checks to pass before merge. In practice, that means requiring the backend CI, frontend CI, and frontend deployment checks as status checks for protected branches.
 
-If repository rulesets are enabled in GitHub, they should be configured so that:
+Github rulesets are enabled for this project and does the following:
 
 - pull requests are required for protected branches
 - required status checks must pass before merging
@@ -174,9 +202,6 @@ Once signed in, authenticated users can see:
 - live telemetry stream status
 - audit log summaries and recent mission history
 
-The telemetry panel intentionally shows a shortened preview first and allows expansion for the full payload. The audit panel follows the same pattern, showing summary cards first and then expandable full history.
-
-### Commander-specific behaviour
 
 Users with the `COMMANDER` role can:
 
@@ -235,8 +260,6 @@ The backend integrates with the provided robot simulator image:
 - REST endpoints for status, map, sensor, move, and reset
 - WebSocket telemetry relay through `/ws/telemetry`
 
-The backend resolves the simulator address from configuration. In local development it normally uses `ROBOT_SIM_URL=http://127.0.0.1:5001`. In hosted environments it can instead use `ROBOT_SIM_HOSTPORT` for internal service-to-service communication.
-
 ### Authentication and RBAC
 
 Authentication is JWT-based and supports:
@@ -275,16 +298,6 @@ The main application routes are:
 - `GET /api/audit/statuses`
 - `GET /ws/telemetry`
 
-### Reliability behaviour
-
-The backend adds resilience on top of the raw simulator API:
-
-- configurable timeout for simulator requests
-- automatic retries for safe read operations
-- no automatic retries for mutating robot commands
-- audit capture for command attempts and status snapshots
-- separate `/health/live` endpoint so hosting health checks do not depend on simulator readiness
-
 ### Error handling
 
 The backend normalises application and upstream failures into predictable HTTP responses:
@@ -313,41 +326,6 @@ The Vercel configuration in `frontend/vercel.json` keeps SPA routes such as `/lo
 
 The backend is hosted on Render and backed by a managed Postgres database. The repository includes `render.yaml`, which describes:
 
-- `virtual-robot-management-db` - Render Postgres database
-- `robot-simulator` - Render private service using the provided simulator image
-- `backend` - Render Node web service
-
-The backend is configured on Render with:
-
-- build command: `npm install && npm run build --workspace backend`
-- start command: `npm run start --workspace backend`
-- health check path: `/health/live`
-
-The Render deployment model is important because it separates infrastructure responsibilities cleanly:
-
-- Render Postgres stores users and audit history
-- the backend exposes the public API
-- the simulator service runs as the upstream robot source
-
-### Render-specific backend variables
-
-The Render Blueprint wires most operational configuration automatically. Secret values still need to be supplied for:
-
-- `AUTH_JWT_SECRET`
-- `SEED_COMMANDER_PASSWORD`
-
-The Blueprint also maps:
-
-- `DATABASE_URL` from Render Postgres
-- `ROBOT_SIM_HOSTPORT` from the simulator service
-
-### Deployment verification
-
-Useful production checks:
-
-```bash
-curl https://<backend-onrender-domain>/health/live
-curl https://<backend-onrender-domain>/health
-```
-
-If `/health/live` succeeds but `/health` fails, the backend is up but the simulator integration is not healthy. If both succeed, the backend can reach the simulator and the remaining debugging surface is usually frontend environment configuration or an authenticated dashboard endpoint.
+- `virtual-robot-management-db` - Render Postgres database storing users and audit history
+- `robot-simulator` - this service using the provided simulator image
+- `backend` - Render Node web service exposes the public API
