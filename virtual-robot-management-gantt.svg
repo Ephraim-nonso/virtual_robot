@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Virtual Robot Management Project Timeline</title>
+  <desc id="desc">PM-style Gantt chart showing planning, sprint delivery, deployment, and current state from April 21 to May 18, 2026.</desc>
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font: 700 28px Inter, Arial, sans-serif; fill: #0a1325; }
+      .subtitle { font: 400 14px Inter, Arial, sans-serif; fill: #5f6b7a; }
+      .section { font: 700 14px Inter, Arial, sans-serif; fill: #0a1325; }
+      .label { font: 500 13px Inter, Arial, sans-serif; fill: #0a1325; }
+      .tick { font: 500 11px Inter, Arial, sans-serif; fill: #64748b; text-anchor: middle; }
+      .grid { stroke: #e5e7eb; stroke-width: 1; }
+      .grid-strong { stroke: #cbd5e1; stroke-width: 1.25; }
+      .section-bg { fill: #f8fcff; }
+      .section-line { stroke: #dbe5ea; stroke-width: 1; }
+      .done { fill: #7dd3fc; stroke: #0a1325; stroke-width: 1.25; rx: 10; ry: 10; }
+      .active { fill: #0a1325; stroke: #0a1325; stroke-width: 1.25; rx: 10; ry: 10; }
+      .milestone { fill: #4bcde9; stroke: #0a1325; stroke-width: 1.25; }
+      .bar-text { font: 600 11px Inter, Arial, sans-serif; fill: #0a1325; }
+      .bar-text-light { font: 600 11px Inter, Arial, sans-serif; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="1080" />
+
+  <text class="title" x="64" y="58">Virtual Robot Management Project Timeline</text>
+  <text class="subtitle" x="64" y="84">PM-style schedule based on repository initialization, planning window, sprint delivery, deployment, and current status.</text>
+
+  <!-- Chart frame -->
+  <rect x="48" y="112" width="1504" height="912" rx="22" ry="22" fill="#ffffff" stroke="#dbe5ea" stroke-width="1.5" />
+
+  <!-- Section backgrounds -->
+  <rect class="section-bg" x="60" y="168" width="1480" height="48" rx="14" ry="14" />
+  <rect class="section-bg" x="60" y="236" width="1480" height="168" rx="14" ry="14" />
+  <rect class="section-bg" x="60" y="424" width="1480" height="128" rx="14" ry="14" />
+  <rect class="section-bg" x="60" y="572" width="1480" height="148" rx="14" ry="14" />
+  <rect class="section-bg" x="60" y="740" width="1480" height="128" rx="14" ry="14" />
+  <rect class="section-bg" x="60" y="888" width="1480" height="108" rx="14" ry="14" />
+
+  <!-- Axis -->
+  <line class="grid-strong" x1="320" y1="140" x2="320" y2="996" />
+  <line class="grid-strong" x1="320" y1="140" x2="1424" y2="140" />
+
+  <!-- Date ticks: Apr 21 to May 18 -->
+  <!-- x positions start at 338, step 38 -->
+  <g>
+    <line class="grid-strong" x1="338" y1="140" x2="338" y2="996" /><text class="tick" x="338" y="128">Apr 21</text>
+    <line class="grid" x1="376" y1="140" x2="376" y2="996" /><text class="tick" x="376" y="128">22</text>
+    <line class="grid" x1="414" y1="140" x2="414" y2="996" /><text class="tick" x="414" y="128">23</text>
+    <line class="grid" x1="452" y1="140" x2="452" y2="996" /><text class="tick" x="452" y="128">24</text>
+    <line class="grid" x1="490" y1="140" x2="490" y2="996" /><text class="tick" x="490" y="128">25</text>
+    <line class="grid" x1="528" y1="140" x2="528" y2="996" /><text class="tick" x="528" y="128">26</text>
+    <line class="grid" x1="566" y1="140" x2="566" y2="996" /><text class="tick" x="566" y="128">27</text>
+    <line class="grid" x1="604" y1="140" x2="604" y2="996" /><text class="tick" x="604" y="128">28</text>
+    <line class="grid" x1="642" y1="140" x2="642" y2="996" /><text class="tick" x="642" y="128">29</text>
+    <line class="grid" x1="680" y1="140" x2="680" y2="996" /><text class="tick" x="680" y="128">30</text>
+    <line class="grid-strong" x1="718" y1="140" x2="718" y2="996" /><text class="tick" x="718" y="128">May 1</text>
+    <line class="grid" x1="756" y1="140" x2="756" y2="996" /><text class="tick" x="756" y="128">2</text>
+    <line class="grid" x1="794" y1="140" x2="794" y2="996" /><text class="tick" x="794" y="128">3</text>
+    <line class="grid" x1="832" y1="140" x2="832" y2="996" /><text class="tick" x="832" y="128">4</text>
+    <line class="grid" x1="870" y1="140" x2="870" y2="996" /><text class="tick" x="870" y="128">5</text>
+    <line class="grid" x1="908" y1="140" x2="908" y2="996" /><text class="tick" x="908" y="128">6</text>
+    <line class="grid" x1="946" y1="140" x2="946" y2="996" /><text class="tick" x="946" y="128">7</text>
+    <line class="grid" x1="984" y1="140" x2="984" y2="996" /><text class="tick" x="984" y="128">8</text>
+    <line class="grid" x1="1022" y1="140" x2="1022" y2="996" /><text class="tick" x="1022" y="128">9</text>
+    <line class="grid" x1="1060" y1="140" x2="1060" y2="996" /><text class="tick" x="1060" y="128">10</text>
+    <line class="grid" x1="1098" y1="140" x2="1098" y2="996" /><text class="tick" x="1098" y="128">11</text>
+    <line class="grid" x1="1136" y1="140" x2="1136" y2="996" /><text class="tick" x="1136" y="128">12</text>
+    <line class="grid" x1="1174" y1="140" x2="1174" y2="996" /><text class="tick" x="1174" y="128">13</text>
+    <line class="grid" x1="1212" y1="140" x2="1212" y2="996" /><text class="tick" x="1212" y="128">14</text>
+    <line class="grid" x1="1250" y1="140" x2="1250" y2="996" /><text class="tick" x="1250" y="128">15</text>
+    <line class="grid" x1="1288" y1="140" x2="1288" y2="996" /><text class="tick" x="1288" y="128">16</text>
+    <line class="grid" x1="1326" y1="140" x2="1326" y2="996" /><text class="tick" x="1326" y="128">17</text>
+    <line class="grid-strong" x1="1364" y1="140" x2="1364" y2="996" /><text class="tick" x="1364" y="128">18</text>
+  </g>
+
+  <!-- Section labels -->
+  <text class="section" x="80" y="196">Initiation</text>
+  <text class="section" x="80" y="264">Planning</text>
+  <text class="section" x="80" y="452">Sprint 1 - Backend Foundations</text>
+  <text class="section" x="80" y="600">Sprint 2 - Backend Security &amp; Quality</text>
+  <text class="section" x="80" y="768">Sprint 3 and 4 - Frontend Delivery</text>
+  <text class="section" x="80" y="916">Sprint 5 - Delivery &amp; Production Readiness</text>
+
+  <!-- Task labels -->
+  <g class="label">
+    <text x="80" y="226">Project kickoff / repo initialization</text>
+
+    <text x="80" y="294">Discovery</text>
+    <text x="80" y="326">Requirements analysis</text>
+    <text x="80" y="358">Solution design</text>
+    <text x="80" y="390">Backlog definition</text>
+    <text x="80" y="422">Sprint planning and issue sequencing</text>
+
+    <text x="80" y="482">Simulator REST adapter + resilience</text>
+    <text x="80" y="514">Audit persistence foundation</text>
+    <text x="80" y="546">Backend auth / RBAC / startup stabilization</text>
+
+    <text x="80" y="630">Backend tests</text>
+    <text x="80" y="662">Modularization / runtime refactor</text>
+    <text x="80" y="694">Backend CI workflow</text>
+
+    <text x="80" y="798">Frontend app shell / dashboard / telemetry / map</text>
+    <text x="80" y="830">Frontend auth / RBAC / reconnect UX / audit logs / tests</text>
+    <text x="80" y="862">Frontend UI overhaul</text>
+
+    <text x="80" y="946">Full CI/CD + Vercel pipeline</text>
+    <text x="80" y="978">Backend hosting + Render deployment</text>
+    <text x="80" y="1010">Containerization baseline + current state</text>
+  </g>
+
+  <!-- Bars -->
+  <!-- helper: Apr21 x338 -->
+  <rect class="done" x="338" y="210" width="38" height="20" />
+
+  <!-- Planning Apr23-May07 -->
+  <rect class="done" x="414" y="278" width="114" height="20" />
+  <rect class="done" x="528" y="310" width="114" height="20" />
+  <rect class="done" x="642" y="342" width="114" height="20" />
+  <rect class="done" x="756" y="374" width="114" height="20" />
+  <rect class="done" x="870" y="406" width="76" height="20" />
+
+  <!-- Backend foundations May10-12 -->
+  <rect class="done" x="1060" y="466" width="38" height="20" />
+  <rect class="done" x="1060" y="498" width="38" height="20" />
+  <rect class="done" x="1136" y="530" width="38" height="20" />
+
+  <!-- Backend security/quality May12 -->
+  <rect class="done" x="1136" y="614" width="38" height="20" />
+  <rect class="done" x="1136" y="646" width="38" height="20" />
+  <rect class="done" x="1136" y="678" width="38" height="20" />
+
+  <!-- Frontend delivery May13-18 -->
+  <rect class="done" x="1174" y="782" width="76" height="20" />
+  <rect class="done" x="1288" y="814" width="76" height="20" />
+  <rect class="done" x="1364" y="846" width="38" height="20" />
+
+  <!-- Delivery & production readiness -->
+  <rect class="done" x="1326" y="930" width="38" height="20" />
+  <rect class="done" x="1364" y="962" width="38" height="20" />
+  <rect class="active" x="1364" y="994" width="38" height="20" />
+
+  <!-- Bar labels -->
+  <text class="bar-text" x="347" y="224">Done</text>
+  <text class="bar-text" x="452" y="292">Apr 23-25</text>
+  <text class="bar-text" x="564" y="324">Apr 26-28</text>
+  <text class="bar-text" x="676" y="356">Apr 29-May 1</text>
+  <text class="bar-text" x="790" y="388">May 2-4</text>
+  <text class="bar-text" x="880" y="420">May 5-7</text>
+
+  <text class="bar-text" x="1066" y="480">May 10</text>
+  <text class="bar-text" x="1066" y="512">May 10</text>
+  <text class="bar-text" x="1142" y="544">May 12</text>
+
+  <text class="bar-text" x="1142" y="628">May 12</text>
+  <text class="bar-text" x="1142" y="660">May 12</text>
+  <text class="bar-text" x="1142" y="692">May 12</text>
+
+  <text class="bar-text" x="1188" y="796">May 13-14</text>
+  <text class="bar-text" x="1294" y="828">May 16-17</text>
+  <text class="bar-text" x="1370" y="860">May 18</text>
+
+  <text class="bar-text" x="1332" y="944">May 17</text>
+  <text class="bar-text" x="1370" y="976">May 18</text>
+  <text class="bar-text-light" x="1370" y="1008">Active</text>
+
+  <!-- Legend -->
+  <rect x="1210" y="64" width="18" height="18" class="done" />
+  <text class="label" x="1238" y="78">Completed</text>
+  <rect x="1336" y="64" width="18" height="18" class="active" />
+  <text class="label" x="1364" y="78">Current state</text>
+</svg>
