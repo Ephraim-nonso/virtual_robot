@@ -1,35 +1,39 @@
 # Virtual Robot Management
 
-This repository is a monorepo for a Ground Control Station web application that sits in front of the provided Virtual Robot simulator.
+This repository is a monorepo for a Ground Control Station web application that sits in front of the provided Virtual Robot simulator. The application is split into a React frontend and an Express/TypeScript backend. The backend owns authentication, RBAC, audit logging, simulator integration, and database persistence; the frontend presents a role-aware dashboard for operators.
 
 ## Project Structure
 
-- `backend/` - Express TypeScript backend adapter
-- `frontend/` - React frontend
-- `compose.yaml` - local full-stack container orchestration
+- `frontend/` - React/Vite dashboard application
+- `backend/` - Express and TypeScript backend adapter and API
+- `compose.yaml` - local Docker Compose file for the robot simulator image
+- `render.yaml` - Render Blueprint for backend and database deployment
+- `.github/workflows/` - CI and deployment workflows
 
 ## Local Setup
 
-1. Install dependencies:
+The local setup is designed around one external dependency: the Virtual Robot simulator container image. The frontend and backend run from the workspace during development, while Docker Compose is used to start the simulator image locally.
+
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Start the local development services:
+### 2. Start the simulator container image
+
+The local `compose.yaml` starts the provided simulator image:
+
+- image: `ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest`
+- exposed locally at `http://localhost:5001`
+
+Start it with:
 
 ```bash
 docker compose up -d
 ```
 
-This brings up:
-
-- `frontend` at `http://localhost:3000`
-- `backend` at `http://localhost:4000`
-- `robot-simulator` at `http://localhost:5001`
-- `postgres` at `localhost:5432`
-
-3. For code-first local development, you can still run the app workspaces directly:
+### 3. Start the backend
 
 ```bash
 npm run dev:frontend
@@ -38,105 +42,32 @@ npm run dev:backend
 
 The backend runs on `http://localhost:4000` by default.
 
-4. Run the backend test suite:
+### 4. Start the frontend
 
 ```bash
-npm run test:backend
+npm run dev:frontend
 ```
 
-## Containerization
+The frontend runs on the Vite development server and uses the backend as its application API.
 
-The repository now includes container artifacts for the full stack:
+### 5. Local environment variables
 
-- `backend/Dockerfile` - production backend image
-- `frontend/Dockerfile` - production frontend image served by Nginx
-- `frontend/docker/default.conf.template` - SPA + API/WebSocket reverse proxy
-- `.dockerignore` - shared Docker build exclusions
-- `compose.yaml` - orchestrates `frontend`, `backend`, `postgres`, and `robot-simulator`
-
-### Start The Full Stack
-
-```bash
-npm run docker:up
-```
-
-or:
-
-```bash
-docker compose up --build
-```
-
-### Stop The Full Stack
-
-```bash
-npm run docker:down
-```
-
-### Container Networking
-
-Inside the container stack:
-
-- the frontend proxies `/api`, `/health`, and `/ws` to the backend container
-- the backend connects to Postgres using `postgres:5432`
-- the backend connects to the simulator using `http://robot-simulator:5000`
-
-This makes the stack portable for platforms such as AWS or Azure container services where the app, API, database, and simulator can run as separate containers on the same network.
-
-## CI/CD
-
-GitHub Actions now supports both CI and frontend deployment flows:
-
-- `backend-ci.yml`
-  - installs workspace dependencies
-  - builds the backend TypeScript project
-  - runs the backend Vitest suite
-
-- `frontend-ci.yml`
-  - installs workspace dependencies
-  - lints the frontend
-  - runs the frontend test suite
-  - builds the frontend production bundle
-
-- `vercel-deploy.yml`
-  - deploys frontend preview builds to Vercel for pull requests against `master`
-  - deploys the frontend production build to Vercel on pushes to `master`
-
-### GitHub Secrets For Vercel Deployment
-
-Add these repository secrets before enabling the Vercel deployment workflow:
-
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
-
-### Frontend Environment Variables
-
-The frontend needs a reachable backend URL in production. Set these in the Vercel project environment:
-
-- `VITE_API_BASE_URL`
-- `VITE_WS_BASE_URL`
-
-Example values:
+Frontend environment variables:
 
 ```env
 VITE_API_BASE_URL=https://your-backend-domain.example.com
 VITE_WS_BASE_URL=wss://your-backend-domain.example.com
 ```
 
-The frontend Vercel configuration lives in `frontend/vercel.json` and includes SPA rewrites for `/login` and `/dashboard`.
+In local development these can be left unset when using a local proxy or configured explicitly if the backend is remote.
 
-## Backend Environment Variables
-
-Create `backend/.env` if you want to override the defaults:
+Backend environment variables:
 
 ```env
 PORT=4000
 HOST=0.0.0.0
 ROBOT_SIM_URL=http://127.0.0.1:5001
 ROBOT_SIM_HOSTPORT=
-SIMULATOR_REQUEST_TIMEOUT_MS=3000
-SIMULATOR_READ_RETRY_COUNT=2
-SIMULATOR_READ_RETRY_DELAY_MS=400
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/virtual_robot_management
 DATABASE_SSL=false
 AUTH_JWT_SECRET=change-me-in-env
@@ -144,164 +75,279 @@ AUTH_TOKEN_EXPIRY=8h
 SEED_COMMANDER_NAME=Commander
 SEED_COMMANDER_EMAIL=commander@example.com
 SEED_COMMANDER_PASSWORD=change-me
+SIMULATOR_REQUEST_TIMEOUT_MS=3000
+SIMULATOR_READ_RETRY_COUNT=2
+SIMULATOR_READ_RETRY_DELAY_MS=400
+AUDIT_DEFAULT_ACTOR=system
 ```
 
-`ROBOT_SIM_HOSTPORT` is optional and is useful on platforms such as Render where the simulator is exposed over an internal `host:port` pair. If `ROBOT_SIM_URL` is set, it takes precedence.
+`ROBOT_SIM_URL` points directly to the simulator and takes precedence over `ROBOT_SIM_HOSTPORT`. `ROBOT_SIM_HOSTPORT` is mainly useful in hosted environments such as Render where the backend should talk to the simulator using an internal service address.
 
-## Render Deployment
+## CI/CD
 
-The repository now includes a root `render.yaml` Blueprint that provisions three Render resources together:
+The repository uses GitHub Actions for automated verification and deployment. The current workflow setup covers backend build/test, frontend lint/test/build, and Vercel deployment for the frontend.
 
-- a Render Postgres database: `virtual-robot-management-db`
-- a private service for the simulator image: `robot-simulator`
-- a public web service for the API: `backend`
+### Backend CI
 
-The simulator runs from the existing image:
+`/.github/workflows/backend-ci.yml`
 
-- `ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest`
+This workflow runs on pushes to `master`, `feat/**`, `fix/**`, and `refactor/**`, and also on pull requests. It:
 
-The backend uses `/health/live` for Render healthchecks so it can deploy even if the simulator service is still starting.
+- checks out the repository
+- installs Node dependencies
+- builds the backend TypeScript project
+- runs the backend Vitest suite
 
-### Backend Variables On Render
+This ensures backend API changes, authentication logic, database integration code, and simulator client behaviour remain buildable and testable before merge.
 
-The Blueprint configures most backend variables automatically. You still need to provide secret values for:
+### Frontend CI
 
-- `AUTH_JWT_SECRET`
-- `SEED_COMMANDER_PASSWORD`
+`/.github/workflows/frontend-ci.yml`
 
-The Blueprint also wires:
+This workflow runs on the same branch patterns and pull requests. It:
 
-- `DATABASE_URL` from Render Postgres
-- `ROBOT_SIM_HOSTPORT` from the simulator service's internal `host:port`
+- installs dependencies
+- lints the frontend
+- runs the frontend Vitest suite
+- builds the production frontend bundle
 
-### Render CLI Workflow
+This gives the frontend a proper quality gate rather than only checking whether the app compiles.
 
-1. Install and authenticate the CLI:
+### Frontend deployment workflow
 
-```bash
-npm install -g @render/cli
-render login
+`/.github/workflows/vercel-deploy.yml`
+
+This workflow deploys the frontend to Vercel:
+
+- preview deployments on pull requests to `master`
+- production deployments on pushes to `master`
+
+It uses the Vercel CLI to pull the correct environment, build the app, and deploy the prebuilt artefact.
+
+### GitHub secrets
+
+The Vercel deployment workflow requires these repository secrets:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+These must be configured in GitHub before the deployment workflow can run successfully.
+
+### Rulesets and merge protection
+
+GitHub Actions are most effective when paired with repository rulesets or branch protection rules. The expected repository policy for `master` is to require the CI checks to pass before merge. In practice, that means requiring the backend CI, frontend CI, and frontend deployment checks as status checks for protected branches.
+
+If repository rulesets are enabled in GitHub, they should be configured so that:
+
+- pull requests are required for protected branches
+- required status checks must pass before merging
+- direct pushes to `master` are restricted if you want preview and production deployment to remain review-driven
+
+## Frontend
+
+The frontend is a React dashboard that presents robot state, mission context, authenticated telemetry, and audit history through a role-aware UI.
+
+### Authentication experience
+
+The login page supports two flows:
+
+- sign in with an existing backend account
+- create a new account and choose an initial role of `VIEWER` or `COMMANDER`
+
+The page also explains role permissions so the user understands the difference between read-only access and command authority.
+
+### Dashboard information shown to all authenticated users
+
+Once signed in, authenticated users can see:
+
+- operator identity and current role
+- robot ID
+- robot position on the grid
+- battery percentage
+- robot state or command status
+- overall connection health
+- last sync time
+- mission navigation summary in the sidebar
+- map dimensions and robot placement
+- sensor summary and lidar sample count
+- live telemetry stream status
+- audit log summaries and recent mission history
+
+The telemetry panel intentionally shows a shortened preview first and allows expansion for the full payload. The audit panel follows the same pattern, showing summary cards first and then expandable full history.
+
+### Commander-specific behaviour
+
+Users with the `COMMANDER` role can:
+
+- move the robot by submitting target `x` and `y` coordinates
+- reset the simulator
+
+Users with the `VIEWER` role can still monitor the robot and inspect telemetry and audit history, but the movement and reset controls are hidden and replaced with a role-locked message.
+
+### Frontend production environment variables
+
+The frontend depends on the backend URL in production:
+
+```env
+VITE_API_BASE_URL=https://your-backend-domain.example.com
+VITE_WS_BASE_URL=wss://your-backend-domain.example.com
 ```
 
-2. Validate the Blueprint:
+- `VITE_API_BASE_URL` is used for REST calls such as auth, status, map, sensor, move, reset, and audit endpoints
+- `VITE_WS_BASE_URL` is used for the authenticated telemetry WebSocket stream
 
-```bash
-render blueprints validate
-```
+If these values are incorrect in Vercel, the deployed dashboard can appear healthy while failing to reach the intended backend.
 
-3. In the Render dashboard, create a new Blueprint-backed project from this repo and approve the three resources declared in `render.yaml`.
+## Backend
 
-4. After the services are created, trigger deploys from the CLI as needed:
+The backend is the application boundary between the frontend and the robot simulator. The browser never talks directly to the simulator. Instead, the backend:
 
-```bash
-render services --output json
-render deploys create <backend-service-id> --wait
-render deploys create <robot-simulator-service-id> --wait
-```
+- authenticates users
+- enforces role-based permissions
+- validates movement payloads
+- proxies REST requests to the simulator
+- proxies the telemetry WebSocket
+- persists users and audit data in PostgreSQL
+- normalises errors for the frontend
 
-5. Verify the backend once deployed:
+### Persistence with PostgreSQL
 
-```bash
-curl https://<backend-onrender-domain>/health/live
-curl https://<backend-onrender-domain>/health
-```
+PostgreSQL is used for durable storage of:
 
-Use the CLI to inspect service metadata and find the backend URL:
+- registered users
+- seeded commander account
+- command audit logs
+- robot status snapshot audit logs
 
-```bash
-render services --output json
-```
+The backend initialises its schema automatically on startup, creating:
 
-### Services Created By The Blueprint
+- `users`
+- `command_audit_logs`
+- `status_audit_logs`
 
-- `backend`
-- `HOST=0.0.0.0`
-- web service
-- build command: `npm install && npm run build --workspace backend`
-- start command: `npm run start --workspace backend`
-- healthcheck: `/health/live`
+This means the application does not rely on in-memory state or file-based identity storage for authentication and audit history.
 
-- `robot-simulator`
-- private service
-- image source: `ghcr.io/francescodelduchetto/cmp9134_2526_robotsim:latest`
-- internal port: `5000`
+### Robot simulator integration
 
-- `virtual-robot-management-db`
-- Render Postgres database
+The backend integrates with the provided robot simulator image:
 
-## Backend REST API
+- REST endpoints for status, map, sensor, move, and reset
+- WebSocket telemetry relay through `/ws/telemetry`
 
-The frontend should use these backend routes instead of calling the simulator directly:
+The backend resolves the simulator address from configuration. In local development it normally uses `ROBOT_SIM_URL=http://127.0.0.1:5001`. In hosted environments it can instead use `ROBOT_SIM_HOSTPORT` for internal service-to-service communication.
+
+### Authentication and RBAC
+
+Authentication is JWT-based and supports:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
+
+RBAC is implemented with two roles:
+
+- `VIEWER` - read-only dashboard access
+- `COMMANDER` - read access plus robot command capability
+
+Access policy:
+
+- `VIEWER` and `COMMANDER` can access status, map, sensor, audit routes, and telemetry
+- only `COMMANDER` can call move and reset operations
+
+The backend also seeds a commander account at startup from environment variables so that an operator account is always available after deployment.
+
+### Backend REST API
+
+The main application routes are:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `GET /health/live`
 - `GET /health`
 - `GET /api/robot/status`
 - `GET /api/robot/map`
 - `GET /api/robot/sensor`
 - `POST /api/robot/move`
 - `POST /api/robot/reset`
-- `GET /ws/telemetry` (WebSocket upgrade)
+- `GET /api/audit/commands`
+- `GET /api/audit/statuses`
+- `GET /ws/telemetry`
 
-### Example Move Request
+### Reliability behaviour
+
+The backend adds resilience on top of the raw simulator API:
+
+- configurable timeout for simulator requests
+- automatic retries for safe read operations
+- no automatic retries for mutating robot commands
+- audit capture for command attempts and status snapshots
+- separate `/health/live` endpoint so hosting health checks do not depend on simulator readiness
+
+### Error handling
+
+The backend normalises application and upstream failures into predictable HTTP responses:
+
+- `400` for invalid request bodies
+- `401` for missing or invalid tokens
+- `403` for forbidden role access
+- simulator HTTP failures as `Simulator request failed.`
+- simulator connection failures as `Robot simulator is unavailable.`
+- simulator timeouts as `Robot simulator request timed out.`
+
+## Deployment
+
+The deployed system is split across Vercel and Render.
+
+### Frontend on Vercel
+
+The frontend is hosted on Vercel and built from the `frontend/` workspace. Vercel deployment is handled through the GitHub Actions workflow described above. The frontend needs the backend URL injected through:
+
+- `VITE_API_BASE_URL`
+- `VITE_WS_BASE_URL`
+
+The Vercel configuration in `frontend/vercel.json` keeps SPA routes such as `/login` and `/dashboard` working correctly by rewriting unknown routes to `index.html`.
+
+### Backend and database on Render
+
+The backend is hosted on Render and backed by a managed Postgres database. The repository includes `render.yaml`, which describes:
+
+- `virtual-robot-management-db` - Render Postgres database
+- `robot-simulator` - Render private service using the provided simulator image
+- `backend` - Render Node web service
+
+The backend is configured on Render with:
+
+- build command: `npm install && npm run build --workspace backend`
+- start command: `npm run start --workspace backend`
+- health check path: `/health/live`
+
+The Render deployment model is important because it separates infrastructure responsibilities cleanly:
+
+- Render Postgres stores users and audit history
+- the backend exposes the public API
+- the simulator service runs as the upstream robot source
+
+### Render-specific backend variables
+
+The Render Blueprint wires most operational configuration automatically. Secret values still need to be supplied for:
+
+- `AUTH_JWT_SECRET`
+- `SEED_COMMANDER_PASSWORD`
+
+The Blueprint also maps:
+
+- `DATABASE_URL` from Render Postgres
+- `ROBOT_SIM_HOSTPORT` from the simulator service
+
+### Deployment verification
+
+Useful production checks:
 
 ```bash
-curl -X POST http://localhost:4000/api/robot/move \
-  -H "Authorization: Bearer <jwt-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"x": 5, "y": 7}'
+curl https://<backend-onrender-domain>/health/live
+curl https://<backend-onrender-domain>/health
 ```
 
-## Authentication And RBAC
-
-The backend now provides JWT-based authentication and role-based access control backed by Postgres persistence for users and audit history.
-
-- new registrations can choose `VIEWER` or `COMMANDER`
-- a seed `COMMANDER` account is created at startup from the environment variables above
-- `VIEWER` and `COMMANDER` can access:
-  - `GET /api/auth/me`
-  - `GET /api/robot/status`
-  - `GET /api/robot/map`
-  - `GET /api/robot/sensor`
-  - `GET /ws/telemetry?token=<jwt-token>`
-- only `COMMANDER` can access:
-  - `POST /api/robot/move`
-  - `POST /api/robot/reset`
-
-### Example Registration
-
-```bash
-curl -X POST http://localhost:4000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Viewer One","email":"viewer@example.com","password":"password123","role":"VIEWER"}'
-```
-
-### Example Login
-
-```bash
-curl -X POST http://localhost:4000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"commander@example.com","password":"change-me"}'
-```
-
-## Error Handling
-
-The backend normalizes simulator failures as follows:
-
-- invalid move payloads return `400`
-- invalid login/registration payloads return `400`
-- missing or invalid auth tokens return `401`
-- forbidden role access returns `403`
-- simulator HTTP errors are forwarded with a `Simulator request failed` response
-- simulator connection failures return `503` with `Robot simulator is unavailable`
-- simulator timeouts return `504` with `Robot simulator request timed out`
-
-## Retry And Timeout Behavior
-
-The backend now applies resilience rules when talking to the simulator:
-
-- each simulator request uses a configurable timeout
-- safe read requests (`GET /health`, `GET /api/robot/status`, `GET /api/robot/map`, `GET /api/robot/sensor`) are retried automatically
-- mutating requests (`POST /api/robot/move`, `POST /api/robot/reset`) are not retried automatically to avoid duplicate robot commands
-- timeout and retry settings are controlled through the simulator environment variables above
+If `/health/live` succeeds but `/health` fails, the backend is up but the simulator integration is not healthy. If both succeed, the backend can reach the simulator and the remaining debugging surface is usually frontend environment configuration or an authenticated dashboard endpoint.
